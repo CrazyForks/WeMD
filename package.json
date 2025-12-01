@@ -5,10 +5,14 @@
     "scripts": {
         "build": "turbo run build",
         "dev": "turbo run dev",
+        "dev:web": "pnpm --filter @wemd/web run dev",
+        "dev:electron": "ELECTRON_START_URL=http://localhost:5173 NODE_ENV=development pnpm --filter wemd-electron run dev -- --dev",
+        "dev:desktop": "node scripts/run-desktop-dev.mjs",
         "lint": "turbo run lint",
         "format": "prettier --write \"**/*.{ts,tsx,md}\""
     },
     "devDependencies": {
+        "wait-on": "^7.0.1",
         "turbo": "^2.0.0",
         "prettier": "^3.0.0",
         "typescript": "^5.0.0"

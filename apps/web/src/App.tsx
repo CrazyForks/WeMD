@@ -3,10 +3,14 @@ import { Header } from './components/Header/Header';
 import { HistoryPanel } from './components/History/HistoryPanel';
 import { MarkdownEditor } from './components/Editor/MarkdownEditor';
 import { MarkdownPreview } from './components/Preview/MarkdownPreview';
+import { useElectronFile } from './hooks/useElectronFile';
 import './styles/global.css';
 import './App.css';
 
 function App() {
+  // Initialize Electron file operations
+  useElectronFile();
+
   return (
     <div className="app">
       <Toaster

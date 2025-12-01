@@ -291,6 +291,30 @@ MathJax 通过 CDN 加载，首次打开可能较慢。确认网络可访问 `ht
 **如何批量更新主题？**  
 在 `packages/core/src/themes` 修改后，通过 `pnpm --filter @wemd/core run build` 重新构建，前端会自动获取最新样式。
 
+## 桌面应用
+
+WeMD 的 Electron 客户端源码位于 `apps/electron/`，已随仓库公开。GitHub Actions 会在推送或打 tag 时自动构建应用并把产物上传到 Release 页面。
+
+### 下载
+- [macOS (Intel)](https://github.com/your-repo/releases/latest)
+- [macOS (Apple Silicon)](https://github.com/your-repo/releases/latest)
+
+### 从源码构建
+```bash
+# 构建 Web 前端供 Electron 嵌入
+cd apps/web && pnpm install && pnpm run build
+
+# 构建 Electron 桌面端
+cd ../electron
+pnpm install
+# 开发模式
+pnpm run dev
+# 打包 macOS
+pnpm run build:mac
+```
+
+Release 页面还会提供 Actions 生成的最新二进制，下载后即可直接安装使用。
+
 ## 浏览器兼容性
 
 - Chrome / Edge ≥ 90

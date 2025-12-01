@@ -1,0 +1,114 @@
+name: Build and Release Electron App
+
+on:
+  push:
+    tags:
+      - 'v*' # 当推送 v1.0.0 这样的 tag 时触发
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Web dependencies
+        run: |
+          cd apps/web
+          npm install
+
+      - name: Build Web app
+        run: |
+          cd apps/web
+          npm run build
+
+      - name: Install Electron dependencies
+        run: |
+          cd apps/electron
+          npm install
+
+      - name: Build Electron app (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          cd apps/electron
+          npm run build:mac
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Electron app (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          cd apps/electron
+          npm run build:win
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Electron app (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          cd apps/electron
+          npm run build:linux
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifacts (macOS)
+        if: matrix.os == 'macos-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-build
+          path: |
+            apps/electron/dist/*.dmg
+            apps/electron/dist/*.zip
+
+      - name: Upload artifacts (Windows)
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-build
+          path: apps/electron/dist/*.exe
+
+      - name: Upload artifacts (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-build
+          path: |
+            apps/electron/dist/*.AppImage
+            apps/electron/dist/*.deb
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            artifacts/macos-build/*
+            artifacts/windows-build/*
+            artifacts/linux-build/*
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

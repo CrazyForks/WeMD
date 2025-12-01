@@ -6,3 +6,6 @@ node_modules/
 dist/
 .env
 apps/macos/
+# Electron
+apps/electron/node_modules/
+apps/electron/dist/
