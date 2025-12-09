@@ -16,6 +16,7 @@
 <p align="center">
   <a href="https://wemd.app">🌐 官网</a> •
   <a href="https://edit.wemd.app">✏️ 在线使用</a> •
+  <a href="https://wemd.app/docs">📖 文档</a> •
   <a href="https://github.com/tenngoxars/WeMD/releases">📦 下载桌面版</a>
 </p>
 
