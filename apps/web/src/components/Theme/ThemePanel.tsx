@@ -44,8 +44,10 @@ export function ThemePanel({ open, onClose }: ThemePanelProps) {
   const deleteTheme = useEditorStore((state) => state.deleteTheme);
   const duplicateTheme = useEditorStore((state) => state.duplicateTheme);
   const getAllThemes = useEditorStore((state) => state.getAllThemes);
+  const customThemesFromStore = useEditorStore((state) => state.customThemes);
   const persistActiveSnapshot = useHistoryStore((state) => state.persistActiveSnapshot);
-  const allThemes = useMemo(() => getAllThemes(), [getAllThemes]);
+  // Re-compute allThemes when customThemes changes
+  const allThemes = useMemo(() => getAllThemes(), [getAllThemes, customThemesFromStore]);
   const isElectron = typeof window !== 'undefined' && !!(window as any).electron;
   const [selectedThemeId, setSelectedThemeId] = useState<string>('');
   const [nameInput, setNameInput] = useState('');
@@ -86,7 +88,7 @@ export function ThemePanel({ open, onClose }: ThemePanelProps) {
     setIsCreating(true);
     setSelectedThemeId('');
     setNameInput('');
-    setCssInput(selectedTheme?.css || '');
+    setCssInput(''); // 新建主题时 CSS 为空
     setShowDeleteConfirm(false);
   };
 
@@ -122,6 +124,7 @@ export function ThemePanel({ open, onClose }: ThemePanelProps) {
 
       setSelectedThemeId(newTheme.id);
       setIsCreating(false);
+      toast.success('主题创建成功');
     } else if (isCustomTheme) {
       // 更新现有主题
       updateTheme(selectedThemeId, {
@@ -140,6 +143,7 @@ export function ThemePanel({ open, onClose }: ThemePanelProps) {
           });
         }
       }
+      toast.success('主题已保存');
     }
   };
 
@@ -152,10 +156,9 @@ export function ThemePanel({ open, onClose }: ThemePanelProps) {
     if (!isCustomTheme) return;
 
     deleteTheme(selectedThemeId);
-    const defaultTheme = allThemes.find((t) => t.id === 'default');
-    if (defaultTheme) {
-      handleSelectTheme(defaultTheme.id);
-    }
+    // 切换到默认主题并应用
+    selectTheme('default');
+    handleSelectTheme('default');
     setShowDeleteConfirm(false);
     toast.success('主题已删除');
   };
@@ -165,6 +168,7 @@ export function ThemePanel({ open, onClose }: ThemePanelProps) {
     const newName = `${selectedTheme.name} (副本)`;
     const duplicated = duplicateTheme(selectedThemeId, newName);
     handleSelectTheme(duplicated.id);
+    toast.success('主题已复制');
   };
 
   // Group themes
