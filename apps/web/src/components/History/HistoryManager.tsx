@@ -174,13 +174,7 @@ export function HistoryManager() {
       latest.customCSS === candidateEntry.customCSS &&
       latest.themeName === candidateEntry.themeName;
 
-    const isInitialRun = !hasAppliedInitialHistoryRef.current;
-    const shouldSkipApply = isInitialRun && hasUserEditedRef.current;
-
-    if (shouldSkipApply) {
-      hasAppliedInitialHistoryRef.current = true;
-      return;
-    }
+    // 首次加载时，始终应用历史记录，确保刷新后恢复上次编辑的内容
 
     if (matchesLatest) {
       if (candidateEntry.id !== activeId) {
