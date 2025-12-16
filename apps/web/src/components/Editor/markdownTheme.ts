@@ -68,11 +68,10 @@ export const wechatMarkdownHighlighting = syntaxHighlighting(
             color: '#38b2ac',
         },
 
-        // 行内代码
+        // 行内代码 - 不设置 backgroundColor，让 CSS 控制，避免遮挡选中效果
         {
             tag: t.monospace,
             fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
-            backgroundColor: '#f7fafc',
             color: '#e53e3e',
             padding: '2px 5px',
             borderRadius: '3px',

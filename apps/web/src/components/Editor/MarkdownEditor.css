@@ -219,15 +219,22 @@
     opacity: 0.8;
 }
 
-/* 行内代码 */
+/* 行内代码 - 使用半透明背景让选中效果可透过 */
 .editor-container .cm-inline-code {
-    background-color: var(--bg-hover);
+    background-color: rgba(247, 250, 252, 0.7);
     color: #e53e3e;
     padding: 2px 6px;
     border-radius: 4px;
     font-size: 0.9em;
     font-family: var(--font-mono);
-    border: 1px solid rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* 行内代码选中状态 - 确保选中时显示选中背景色 */
+.editor-container .cm-line .cm-inline-code::selection,
+.editor-container .cm-line .cm-inline-code *::selection {
+    background-color: rgba(7, 193, 96, 0.35) !important;
+    color: inherit;
 }
 
 /* 引用块 */
