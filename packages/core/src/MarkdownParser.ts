@@ -29,6 +29,7 @@ import markdownItLiReplacer from "./plugins/markdown-it-li";
 
 import markdownItGitHubAlert from "./plugins/markdown-it-github-alert";
 import markdownItTaskLists from "markdown-it-task-lists";
+import markdownItCheckboxEmoji from "./plugins/markdown-it-checkbox-emoji";
 
 import highlightjs from "./utils/langHighlight";
 
@@ -85,7 +86,8 @@ export const createMarkdownParser = () => {
       enabled: true,
       label: true,
       labelAfter: true,
-    });
+    })
+    .use(markdownItCheckboxEmoji);
 
   return markdownParser;
 };

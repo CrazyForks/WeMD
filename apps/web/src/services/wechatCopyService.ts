@@ -11,6 +11,22 @@ const buildCopyCss = (themeCss: string) => {
   return `${themeCss}\n${katexCss}`;
 };
 
+/**
+ * 将 HTML 中的 checkbox 转换为 emoji
+ * 微信公众号会过滤 <input> 标签，需要转为 emoji 替代
+ */
+const convertCheckboxesToEmoji = (html: string): string => {
+  // 使用 &nbsp; 确保空格不被微信吞掉
+  // 先替换选中的 checkbox（包含 checked 属性）
+  let result = html.replace(/<input[^>]*checked[^>]*>/gi, "✅&nbsp;");
+  // 再替换未选中的 checkbox
+  result = result.replace(
+    /<input[^>]*type=["']checkbox["'][^>]*>/gi,
+    "⬜&nbsp;",
+  );
+  return result;
+};
+
 export async function copyToWechat(
   markdown: string,
   css: string,
@@ -33,8 +49,10 @@ export async function copyToWechat(
       ? convertLinksToFootnotes(rawHtml)
       : rawHtml;
     const styledHtml = processHtml(sourceHtml, themedCss, true, true);
+    // 转换 checkbox 为 emoji，微信不支持 input 标签
+    const finalHtml = convertCheckboxesToEmoji(styledHtml);
 
-    container.innerHTML = styledHtml;
+    container.innerHTML = finalHtml;
 
     const selection = window.getSelection();
     const range = document.createRange();

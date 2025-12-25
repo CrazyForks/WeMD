@@ -145,40 +145,26 @@ export const customDefaultTheme = `/* 自定义样式,实时生效,浏览器实�
  */
 #wemd ul {
   padding-left: 24px;
-  list-style-type: none !important;
+  list-style-type: disc;
   color: #34495e;
 }
 
 #wemd ul li {
-  position: relative;
-  list-style-type: none !important;
+  padding-left: 4px;
+  color: #07c160;
 }
 
-#wemd ul li::before {
-  content: '•';
-  position: absolute;
-  left: -16px;
-  color: #07c160;
-  font-size: 14px;
+#wemd ul li section {
+  color: #34495e;
 }
 
 /* 嵌套列表 */
 #wemd ul ul {
-  list-style-type: none !important;
-}
-
-#wemd ul ul li::before {
-  content: '◦';
-  font-size: 14px;
+  list-style-type: circle;
 }
 
 #wemd ul ul ul {
-  list-style-type: none !important;
-}
-
-#wemd ul ul ul li::before {
-  content: '▪';
-  font-size: 10px;
+  list-style-type: square;
 }
 
 /* 有序列表整体样式
