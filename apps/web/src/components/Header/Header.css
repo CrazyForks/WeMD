@@ -122,15 +122,16 @@
 }
 
 .floating-btn-primary {
-  background: var(--accent-gradient);
-  color: white;
-  border: none;
+  background: var(--accent-gradient) !important;
+  color: white !important;
+  border: none !important;
 }
 
 .floating-btn-primary:hover {
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
-  color: white;
+  background: var(--accent-gradient) !important;
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 8px 24px rgba(7, 193, 96, 0.45);
+  color: white !important;
 }
 
 /* 浮动工具栏 tooltip - 显示在左侧 */
@@ -621,12 +622,4 @@
   .css-editor-textarea {
     min-height: 400px;
   }
-}
-
-/* 图床设置模态框 - 更窄的宽度，头部固定 */
-.storage-modal-panel.image-host-modal {
-  width: min(640px, 90vw);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
 }

@@ -13,6 +13,7 @@ import { useStorageContext } from "./storage/StorageContext";
 import { Loader2 } from "lucide-react";
 import { useHistoryStore } from "./store/historyStore";
 import { useFileStore } from "./store/fileStore";
+import { platform } from "./lib/platformAdapter";
 
 const HistoryPanel = lazy(() =>
   import("./components/History/HistoryPanel").then((m) => ({
@@ -69,15 +70,9 @@ function App() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [saveFile]);
 
-  // 检查是否在 Electron 中运行
-  const isElectron = useMemo(() => {
-    return typeof window !== "undefined" && window.electron?.isElectron;
-  }, []);
-  const platform = useMemo(() => {
-    if (typeof window === "undefined") return "web";
-    const electron = window.electron as { platform?: string } | undefined;
-    return electron?.platform ?? "web";
-  }, []);
+  // 使用统一的平台适配器
+  const isElectron = platform.isElectron;
+  const platformName = platform.name ?? "web";
 
   // 更新提示状态
   const [updateInfo, setUpdateInfo] = useState<{
@@ -185,7 +180,7 @@ function App() {
   }
 
   return (
-    <div className="app" data-platform={platform}>
+    <div className="app" data-platform={platformName}>
       {/* 更新提示 Modal */}
       {updateInfo && (
         <Suspense fallback={null}>

@@ -18,6 +18,7 @@ import { useEditorStore } from "../../store/editorStore";
 import { useThemeStore } from "../../store/themeStore";
 import { useHistoryStore } from "../../store/historyStore";
 import { useUITheme } from "../../hooks/useUITheme";
+import { platformActions } from "../../lib/platformAdapter";
 import { ThemeDesigner, type DesignerVariables } from "./ThemeDesigner";
 import "./ThemePanel.css";
 
@@ -188,14 +189,11 @@ export function ThemePanel({ open, onClose }: ThemePanelProps) {
     (state) => state.persistActiveSnapshot,
   );
   // customThemes 变化时重新计算 allThemes
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+
   const allThemes = useMemo(
     () => getAllThemes(),
     [getAllThemes, customThemesFromStore],
   );
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const isElectron =
-    typeof window !== "undefined" && !!(window as any).electron;
   const [selectedThemeId, setSelectedThemeId] = useState<string>("");
   const [nameInput, setNameInput] = useState("");
   const [cssInput, setCssInput] = useState("");
@@ -296,7 +294,7 @@ export function ThemePanel({ open, onClose }: ThemePanelProps) {
 
   const handleApply = async () => {
     selectTheme(selectedThemeId);
-    if (!isElectron) {
+    if (platformActions.shouldPersistHistory()) {
       const state = useEditorStore.getState();
       await persistActiveSnapshot({
         markdown: state.markdown,
@@ -321,7 +319,7 @@ export function ThemePanel({ open, onClose }: ThemePanelProps) {
       );
       selectTheme(newTheme.id);
 
-      if (!isElectron) {
+      if (platformActions.shouldPersistHistory()) {
         const state = useEditorStore.getState();
         await persistActiveSnapshot({
           markdown: state.markdown,
@@ -353,7 +351,7 @@ export function ThemePanel({ open, onClose }: ThemePanelProps) {
       }
       updateTheme(selectedThemeId, updates);
 
-      if (!isElectron) {
+      if (platformActions.shouldPersistHistory()) {
         const editorState = useEditorStore.getState();
         const themeState = useThemeStore.getState();
         if (themeState.themeId === selectedThemeId) {

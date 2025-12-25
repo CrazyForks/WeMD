@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { useUITheme } from "../../hooks/useUITheme";
 import { useWindowControls } from "../../hooks/useWindowControls";
+import { Modal, FloatingToolbarButton } from "../common";
 
 const DefaultLogoMark = () => (
   <svg
@@ -159,71 +160,46 @@ export function Header() {
         <div
           className={`floating-toolbar ${isWindows ? "floating-toolbar-win" : ""}`}
         >
-          <button
-            className="floating-btn floating-btn-show"
+          <FloatingToolbarButton
+            icon={<ChevronsUp size={18} strokeWidth={2} />}
+            label="显示标题栏"
             onClick={() => setAutoHide(false)}
-            aria-label="显示标题栏"
-            title="显示标题栏"
-            data-tooltip="显示标题栏"
-          >
-            <ChevronsUp size={18} strokeWidth={2} />
-          </button>
-
-          <button
-            className="floating-btn"
+            highlight
+          />
+          <FloatingToolbarButton
+            icon={
+              uiTheme === "dark" ? (
+                <Sun size={18} strokeWidth={2} />
+              ) : (
+                <Moon size={18} strokeWidth={2} />
+              )
+            }
+            label={uiTheme === "dark" ? "亮色模式" : "暗色模式"}
             onClick={() => setTheme(uiTheme === "dark" ? "default" : "dark")}
-            aria-label={uiTheme === "dark" ? "亮色模式" : "暗色模式"}
-            title={uiTheme === "dark" ? "亮色模式" : "暗色模式"}
-            data-tooltip={uiTheme === "dark" ? "亮色模式" : "暗色模式"}
-          >
-            {uiTheme === "dark" ? (
-              <Sun size={18} strokeWidth={2} />
-            ) : (
-              <Moon size={18} strokeWidth={2} />
-            )}
-          </button>
-
+          />
           {!isElectron && (
-            <button
-              className="floating-btn"
+            <FloatingToolbarButton
+              icon={<Layers size={18} strokeWidth={2} />}
+              label="存储模式"
               onClick={() => setShowStorageModal(true)}
-              aria-label="存储模式"
-              title="存储模式"
-              data-tooltip="存储模式"
-            >
-              <Layers size={18} strokeWidth={2} />
-            </button>
+            />
           )}
-
-          <button
-            className="floating-btn"
+          <FloatingToolbarButton
+            icon={<ImageIcon size={18} strokeWidth={2} />}
+            label="图床设置"
             onClick={() => setShowImageHostModal(true)}
-            aria-label="图床设置"
-            title="图床设置"
-            data-tooltip="图床设置"
-          >
-            <ImageIcon size={18} strokeWidth={2} />
-          </button>
-
-          <button
-            className="floating-btn"
+          />
+          <FloatingToolbarButton
+            icon={<Palette size={18} strokeWidth={2} />}
+            label="主题管理"
             onClick={() => setShowThemePanel(true)}
-            aria-label="主题管理"
-            title="主题管理"
-            data-tooltip="主题管理"
-          >
-            <Palette size={18} strokeWidth={2} />
-          </button>
-
-          <button
-            className="floating-btn floating-btn-primary"
+          />
+          <FloatingToolbarButton
+            icon={<Send size={18} strokeWidth={2} />}
+            label="复制到公众号"
             onClick={copyToWechat}
-            aria-label="复制到公众号"
-            title="复制到公众号"
-            data-tooltip="复制到公众号"
-          >
-            <Send size={18} strokeWidth={2} />
-          </button>
+            primary
+          />
         </div>
       )}
 
@@ -312,69 +288,38 @@ export function Header() {
         />
       </Suspense>
 
-      {showStorageModal && (
-        <div
-          className="storage-modal-overlay"
-          onClick={() => setShowStorageModal(false)}
-        >
-          <div
-            className="storage-modal-panel"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="storage-modal-header">
-              <h3>选择存储模式</h3>
-              <button
-                className="storage-modal-close"
-                onClick={() => setShowStorageModal(false)}
-                aria-label="关闭"
-              >
-                ×
-              </button>
+      <Modal
+        open={showStorageModal}
+        onClose={() => setShowStorageModal(false)}
+        title="选择存储模式"
+      >
+        <Suspense
+          fallback={
+            <div style={{ padding: "20px", textAlign: "center" }}>
+              loading...
             </div>
-            <Suspense
-              fallback={
-                <div style={{ padding: "20px", textAlign: "center" }}>
-                  loading...
-                </div>
-              }
-            >
-              <StorageModeSelector />
-            </Suspense>
-          </div>
-        </div>
-      )}
+          }
+        >
+          <StorageModeSelector />
+        </Suspense>
+      </Modal>
 
-      {showImageHostModal && (
-        <div
-          className="storage-modal-overlay"
-          onClick={() => setShowImageHostModal(false)}
-        >
-          <div
-            className="storage-modal-panel image-host-modal"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="storage-modal-header">
-              <h3>图床设置</h3>
-              <button
-                className="storage-modal-close"
-                onClick={() => setShowImageHostModal(false)}
-                aria-label="关闭"
-              >
-                ×
-              </button>
+      <Modal
+        open={showImageHostModal}
+        onClose={() => setShowImageHostModal(false)}
+        title="图床设置"
+        className="modal-narrow"
+      >
+        <Suspense
+          fallback={
+            <div style={{ padding: "20px", textAlign: "center" }}>
+              loading...
             </div>
-            <Suspense
-              fallback={
-                <div style={{ padding: "20px", textAlign: "center" }}>
-                  loading...
-                </div>
-              }
-            >
-              <ImageHostSettings />
-            </Suspense>
-          </div>
-        </div>
-      )}
+          }
+        >
+          <ImageHostSettings />
+        </Suspense>
+      </Modal>
     </>
   );
 }

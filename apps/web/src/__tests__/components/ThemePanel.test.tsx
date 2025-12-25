@@ -1,0 +1,138 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/react";
+import { ThemePanel } from "../../components/Theme/ThemePanel";
+import { useThemeStore } from "../../store/themeStore";
+import { useEditorStore } from "../../store/editorStore";
+import { useHistoryStore } from "../../store/historyStore";
+import { useUITheme } from "../../hooks/useUITheme";
+
+// Mock stores and hooks
+vi.mock("../../store/themeStore");
+vi.mock("../../store/editorStore");
+vi.mock("../../store/historyStore");
+vi.mock("../../hooks/useUITheme");
+vi.mock("../../lib/platformAdapter", () => ({
+  platformActions: {
+    shouldPersistHistory: () => true,
+  },
+}));
+
+// Mock ThemeDesigner to avoid complex dependencies
+vi.mock("../../components/Theme/ThemeDesigner", () => ({
+  ThemeDesigner: () => <div data-testid="theme-designer">Theme Designer</div>,
+}));
+
+describe("ThemePanel", () => {
+  const mockSelectTheme = vi.fn();
+  const mockCreateTheme = vi.fn();
+  const mockUpdateTheme = vi.fn();
+  const mockDeleteTheme = vi.fn();
+  const mockDuplicateTheme = vi.fn();
+  const mockPersistActiveSnapshot = vi.fn();
+
+  const mockThemes = [
+    { id: "default", name: "默认主题", css: "", isBuiltIn: true },
+    {
+      id: "custom1",
+      name: "自定义主题",
+      css: "body{}",
+      isBuiltIn: false,
+      editorMode: "css",
+    },
+  ];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    // Setup theme store mock
+    vi.mocked(useThemeStore).mockImplementation((selector) => {
+      const state = {
+        themeId: "default",
+        selectTheme: mockSelectTheme,
+        createTheme: mockCreateTheme,
+        updateTheme: mockUpdateTheme,
+        deleteTheme: mockDeleteTheme,
+        duplicateTheme: mockDuplicateTheme,
+        getAllThemes: () => mockThemes,
+        customThemes: {},
+      };
+      return selector(state);
+    });
+
+    // Setup editor store mock
+    vi.mocked(useEditorStore).mockReturnValue({
+      markdown: "# Test",
+    });
+    // Also mock getState for direct calls
+    (useEditorStore as unknown as { getState: () => unknown }).getState =
+      () => ({
+        markdown: "# Test",
+      });
+
+    // Setup history store mock
+    vi.mocked(useHistoryStore).mockImplementation((selector) => {
+      const state = {
+        persistActiveSnapshot: mockPersistActiveSnapshot,
+      };
+      return selector(state);
+    });
+
+    // Setup UI theme mock
+    vi.mocked(useUITheme).mockImplementation((selector) => {
+      const state = { theme: "light" };
+      return selector(state);
+    });
+  });
+
+  it("renders when open", () => {
+    render(<ThemePanel open={true} onClose={() => {}} />);
+
+    expect(screen.getByText("主题管理")).toBeInTheDocument();
+    expect(screen.getByText("新建自定义主题")).toBeInTheDocument();
+  });
+
+  it("does not render when closed", () => {
+    render(<ThemePanel open={false} onClose={() => {}} />);
+
+    expect(screen.queryByText("主题管理")).not.toBeInTheDocument();
+  });
+
+  it("displays built-in and custom themes", () => {
+    render(<ThemePanel open={true} onClose={() => {}} />);
+
+    expect(screen.getByText("默认主题")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "自定义主题" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("内置主题")).toBeInTheDocument();
+  });
+
+  it("calls onClose when close button clicked", () => {
+    const mockOnClose = vi.fn();
+    render(<ThemePanel open={true} onClose={mockOnClose} />);
+
+    fireEvent.click(screen.getByLabelText("关闭"));
+    expect(mockOnClose).toHaveBeenCalled();
+  });
+
+  it("selects a theme when clicked", () => {
+    render(<ThemePanel open={true} onClose={() => {}} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "自定义主题" }));
+
+    // 验证主题名称输入框显示选中的主题名称
+    const nameInput = screen.getByPlaceholderText("输入主题名称...");
+    expect(nameInput).toHaveValue("自定义主题");
+  });
+
+  it("enters creation mode when new theme button clicked", () => {
+    render(<ThemePanel open={true} onClose={() => {}} />);
+
+    fireEvent.click(screen.getByText("新建自定义主题"));
+
+    // 应显示创建模式选择界面
+    expect(screen.getByText("选择创建方式")).toBeInTheDocument();
+    expect(screen.getByText("可视化设计")).toBeInTheDocument();
+    expect(screen.getByText("手写 CSS")).toBeInTheDocument();
+  });
+});
