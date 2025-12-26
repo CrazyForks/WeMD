@@ -596,12 +596,29 @@
 /* 响应式 */
 @media (max-width: 768px) {
   .app-header {
-    padding: 0 calc(16px + var(--titlebar-right-inset, 0px)) 0
-      calc(16px + var(--titlebar-left-inset, 0px));
+    height: 56px;
+    margin: 8px 8px 0;
+    border-radius: var(--radius-lg);
+    padding: 0 12px;
+  }
+
+  .logo {
+    gap: 8px;
+  }
+
+  .logo svg,
+  .logo img {
+    width: 32px;
+    height: 32px;
   }
 
   .logo-text {
-    font-size: 18px;
+    font-size: 16px;
+  }
+
+  /* 移动端隐藏副标题和非核心按钮文字 */
+  .logo-subtitle {
+    display: none;
   }
 
   .btn-primary span,
@@ -611,7 +628,31 @@
 
   .btn-primary,
   .btn-secondary {
-    padding: 10px 14px;
+    padding: 8px 12px;
+  }
+
+  .btn-icon-only {
+    width: 36px;
+    height: 36px;
+  }
+
+  /* 移动端隐藏存储模式、图床设置、主题管理按钮(由底部工具栏提供) */
+  .header-right .btn-secondary {
+    display: none;
+  }
+
+  /* 移动端隐藏复制到公众号按钮(由底部工具栏提供) */
+  .header-right .btn-primary {
+    display: none;
+  }
+
+  /* 移动端隐藏隐藏标题栏按钮 */
+  .header-right .btn-ghost {
+    display: none;
+  }
+
+  .header-right {
+    gap: 8px;
   }
 
   .css-editor-modal {
@@ -621,5 +662,10 @@
 
   .css-editor-textarea {
     min-height: 400px;
+  }
+
+  /* 移动端隐藏浮动工具栏 */
+  .floating-toolbar {
+    display: none;
   }
 }

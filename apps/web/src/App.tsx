@@ -6,6 +6,9 @@ import { FileSidebar } from "./components/Sidebar/FileSidebar";
 import { MarkdownEditor } from "./components/Editor/MarkdownEditor";
 import { MarkdownPreview } from "./components/Preview/MarkdownPreview";
 import { useFileSystem } from "./hooks/useFileSystem";
+import { useMobileView } from "./hooks/useMobileView";
+import { MobileToolbar } from "./components/common/MobileToolbar";
+import { useEditorStore } from "./store/editorStore";
 import "./styles/global.css";
 import "./App.css";
 
@@ -33,6 +36,7 @@ const UpdateModal = lazy(() =>
     default: m.UpdateModal,
   })),
 );
+import { MobileThemeSelector } from "./components/Theme/MobileThemeSelector";
 
 // Electron 更新事件数据类型
 interface UpdateEventData {
@@ -57,6 +61,9 @@ function App() {
   const { type: storageType, ready } = useStorageContext();
   const historyLoading = useHistoryStore((state) => state.loading);
   const fileLoading = useFileStore((state) => state.isLoading);
+  const { isMobile, activeView, setActiveView } = useMobileView();
+  const copyToWechat = useEditorStore((state) => state.copyToWechat);
+  const [showThemePanel, setShowThemePanel] = useState(false);
 
   // 全局保存快捷键（统一监听器）
   useEffect(() => {
@@ -180,7 +187,7 @@ function App() {
   }
 
   return (
-    <div className="app" data-platform={platformName}>
+    <div className="app" data-platform={platformName} data-mobile={isMobile}>
       {/* 更新提示 Modal */}
       {updateInfo && (
         <Suspense fallback={null}>
@@ -283,7 +290,10 @@ function App() {
                 ))}
             </div>
           </div>
-          <div className="workspace">
+          <div
+            className="workspace"
+            data-mobile-view={isMobile ? activeView : undefined}
+          >
             <div className="editor-pane">
               {/* 存储未就绪或文件/历史加载中显示 loading */}
               {!ready ||
@@ -310,8 +320,26 @@ function App() {
               )}
             </div>
           </div>
+
+          {/* 移动端底部工具栏 */}
+          {isMobile && (
+            <MobileToolbar
+              activeView={activeView}
+              onViewChange={setActiveView}
+              onCopyToWechat={copyToWechat}
+              onOpenTheme={() => setShowThemePanel(true)}
+            />
+          )}
         </main>
       </>
+
+      {/* 移动端主题选择器 */}
+      {isMobile && (
+        <MobileThemeSelector
+          open={showThemePanel}
+          onClose={() => setShowThemePanel(false)}
+        />
+      )}
     </div>
   );
 }
