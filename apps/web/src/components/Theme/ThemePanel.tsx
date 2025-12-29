@@ -8,6 +8,8 @@ import {
   AlertTriangle,
   Palette,
   Code,
+  Download,
+  Upload,
 } from "lucide-react";
 import {
   createMarkdownParser,
@@ -184,10 +186,13 @@ export function ThemePanel({ open, onClose }: ThemePanelProps) {
   const deleteTheme = useThemeStore((state) => state.deleteTheme);
   const duplicateTheme = useThemeStore((state) => state.duplicateTheme);
   const getAllThemes = useThemeStore((state) => state.getAllThemes);
+  const exportTheme = useThemeStore((state) => state.exportTheme);
+  const importTheme = useThemeStore((state) => state.importTheme);
   const customThemesFromStore = useThemeStore((state) => state.customThemes);
   const persistActiveSnapshot = useHistoryStore(
     (state) => state.persistActiveSnapshot,
   );
+  const fileInputRef = useRef<HTMLInputElement>(null);
   // customThemes 变化时重新计算 allThemes
 
   const allThemes = useMemo(
@@ -421,6 +426,30 @@ export function ThemePanel({ open, onClose }: ThemePanelProps) {
             <button className="btn-new-theme" onClick={handleCreateNew}>
               <Plus size={16} /> 新建自定义主题
             </button>
+            <button
+              className="btn-import-theme"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Upload size={16} /> 导入主题
+            </button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept=".json"
+              style={{ display: "none" }}
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  const success = await importTheme(file);
+                  if (success) {
+                    toast.success("主题导入成功");
+                  } else {
+                    toast.error("导入失败，请检查文件格式");
+                  }
+                  e.target.value = "";
+                }
+              }}
+            />
 
             <div className="theme-list-scroll">
               {customThemes.length > 0 && (
@@ -609,6 +638,14 @@ export function ThemePanel({ open, onClose }: ThemePanelProps) {
                   <button className="btn-icon-text" onClick={handleDuplicate}>
                     <Copy size={16} /> 复制
                   </button>
+                  {selectedTheme?.editorMode === "visual" && (
+                    <button
+                      className="btn-icon-text"
+                      onClick={() => exportTheme(selectedThemeId)}
+                    >
+                      <Download size={16} /> 导出
+                    </button>
+                  )}
                   <button
                     className="btn-icon-text btn-danger"
                     onClick={handleDeleteClick}

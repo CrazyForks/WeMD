@@ -9,6 +9,7 @@ import {
   type DesignerVariables,
 } from "./themes/builtInThemes";
 import { convertCssToWeChatDarkMode } from "@wemd/core";
+import { generateCSS } from "../components/Theme/ThemeDesigner/generateCSS";
 
 // 深色转换缓存，避免重复转换同一段 CSS
 const darkCssCache = new Map<string, string>();
@@ -136,6 +137,10 @@ interface ThemeStore {
   ) => void;
   deleteTheme: (id: string) => void;
   duplicateTheme: (id: string, newName: string) => CustomTheme;
+
+  // 导入导出
+  exportTheme: (id: string) => void;
+  importTheme: (file: File) => Promise<boolean>;
 }
 
 export const useThemeStore = create<ThemeStore>((set, get) => ({
@@ -304,6 +309,67 @@ export const useThemeStore = create<ThemeStore>((set, get) => ({
       sourceTheme.css,
       sourceTheme.designerVariables,
     );
+  },
+
+  exportTheme: (id: string) => {
+    const state = get();
+    const theme = state.customThemes.find((t) => t.id === id);
+    if (!theme || theme.editorMode !== "visual" || !theme.designerVariables) {
+      console.warn("只能导出可视化编辑的主题");
+      return;
+    }
+
+    const exportData = {
+      version: 1,
+      name: theme.name,
+      editorMode: "visual",
+      designerVariables: theme.designerVariables,
+    };
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${theme.name}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  },
+
+  importTheme: async (file: File): Promise<boolean> => {
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+
+      // 验证必要字段
+      if (
+        typeof data.version !== "number" ||
+        typeof data.name !== "string" ||
+        !data.designerVariables
+      ) {
+        console.error("无效的主题文件格式：缺少必要字段");
+        return false;
+      }
+
+      // 检查重名并添加后缀
+      const existingNames = get().customThemes.map((t) => t.name);
+      let finalName = data.name;
+      if (existingNames.includes(finalName)) {
+        let suffix = 1;
+        while (existingNames.includes(`${data.name} (${suffix})`)) {
+          suffix++;
+        }
+        finalName = `${data.name} (${suffix})`;
+      }
+
+      const css = generateCSS(data.designerVariables);
+      get().createTheme(finalName, "visual", css, data.designerVariables);
+      return true;
+    } catch (error) {
+      console.error("导入主题失败:", error);
+      return false;
+    }
   },
 }));
 

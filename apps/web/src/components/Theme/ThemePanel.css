@@ -151,6 +151,29 @@
   box-shadow: var(--shadow-lg);
 }
 
+.btn-import-theme {
+  margin: 0 16px 16px;
+  padding: 10px 16px;
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.btn-import-theme:hover {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
 /* 列表滚动容器 */
 .theme-list-scroll {
   flex: 1;
