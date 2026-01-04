@@ -1,6 +1,6 @@
 export const sunsetFilmTheme = `/* 落日胶片风格 */
 #wemd {
-    padding: 30px 22px;
+    padding: 5px 22px;
     max-width: 677px;
     margin: 0 auto;
     /* 强制使用衬线体，营造电影字幕感 */

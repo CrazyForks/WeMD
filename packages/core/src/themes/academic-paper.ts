@@ -1,6 +1,6 @@
 export const academicPaperTheme = `/* 学术论文风格 */
 #wemd {
-    padding: 30px 20px;
+    padding: 5px 20px;
     max-width: 677px;
     margin: 0 auto;
     /* 混合字体栈：西文Times + 中文宋体 */

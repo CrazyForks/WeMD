@@ -1,6 +1,6 @@
 export const knowledgeBaseTheme = `/* 知识库风格 */
 #wemd {
-    padding: 30px 24px;
+    padding: 5px 24px;
     max-width: 677px;
     margin: 0 auto;
     /* 使用系统无衬线字体，保持干净利落 */

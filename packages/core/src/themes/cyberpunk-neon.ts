@@ -1,6 +1,6 @@
 export const cyberpunkNeonTheme = `/* 赛博朋克风格 */
 #wemd {
-    padding: 24px 20px;
+    padding: 5px 20px;
     max-width: 677px;
     margin: 0 auto;
     font-family: -apple-system, BlinkMacSystemFont, "Microsoft YaHei", sans-serif;

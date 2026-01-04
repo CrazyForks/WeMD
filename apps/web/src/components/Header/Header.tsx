@@ -61,7 +61,6 @@ const StructuralismLogoMark = () => (
   />
 );
 
-// 独立组件：窗口控制按钮
 const WindowControls = ({ fixed = false }: { fixed?: boolean }) => {
   const { minimize, maximize, close } = useWindowControls();
 

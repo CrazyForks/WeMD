@@ -68,6 +68,7 @@ describe("ThemePanel", () => {
         deleteTheme: mockDeleteTheme,
         duplicateTheme: mockDuplicateTheme,
         exportTheme: vi.fn(),
+        exportThemeCSS: vi.fn(),
         importTheme: vi.fn().mockResolvedValue(true),
       };
       return selector(state);

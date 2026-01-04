@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { EditorView, minimalSetup } from "codemirror";
-import { keymap } from "@codemirror/view";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { EditorState } from "@codemirror/state";
 import { githubLight } from "@uiw/codemirror-theme-github";

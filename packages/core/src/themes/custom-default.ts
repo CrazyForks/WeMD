@@ -25,7 +25,7 @@ export const customDefaultTheme = `/* 自定义样式,实时生效,浏览器实�
  * 首行缩进 text-indent: 2em;
  */
 #wemd p {
-  margin: 20px 0;
+  margin: 8px 0;
   font-size: 16px;
   color: #34495e;
   line-height: 1.8;
@@ -37,7 +37,7 @@ export const customDefaultTheme = `/* 自定义样式,实时生效,浏览器实�
   font-size: 28px;
   font-weight: 700;
   color: #1a1a1a;
-  margin: 40px 0 24px;
+  margin: 10px 0 20px;
   text-align: center;
   padding-bottom: 12px;
   border-bottom: 2px solid #07c160;
@@ -61,7 +61,7 @@ export const customDefaultTheme = `/* 自定义样式,实时生效,浏览器实�
   font-size: 22px;
   font-weight: 600;
   color: #2c3e50;
-  margin: 32px 0 16px;
+  margin: 20px 0 14px;
   padding-left: 12px;
   border-left: 4px solid #07c160;
   line-height: 1.4;

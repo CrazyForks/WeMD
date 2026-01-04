@@ -61,13 +61,28 @@ export function GlobalSection({
       </div>
 
       <div className="designer-field">
-        <label>页面边距: {variables.pagePadding}px</label>
+        <label>段落内部间距: {variables.paragraphPadding ?? 0}px</label>
+        <input
+          type="range"
+          className="designer-slider"
+          min={0}
+          max={20}
+          step={0.1}
+          value={variables.paragraphPadding ?? 0}
+          onChange={(e) =>
+            updateVariable("paragraphPadding", Number(e.target.value))
+          }
+        />
+      </div>
+
+      <div className="designer-field">
+        <label>页面两侧间距: {variables.pagePadding}px</label>
         <input
           type="range"
           className="designer-slider"
           min={0}
           max={48}
-          step={1}
+          step={0.1}
           value={variables.pagePadding || 0}
           onChange={(e) =>
             updateVariable("pagePadding", Number(e.target.value))

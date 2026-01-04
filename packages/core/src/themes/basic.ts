@@ -4,7 +4,7 @@ export const basicTheme = `/* 默认样式，最佳实践 */
 #wemd {
   font-size: 16px;
   color: #000000;
-  padding: 0 10px;
+  padding: 0 8px;
   line-height: 1.6;
   word-spacing: 0px;
   letter-spacing: 0px;
@@ -17,8 +17,6 @@ export const basicTheme = `/* 默认样式，最佳实践 */
 /* 段落 */
 #wemd p {
   font-size: 16px;
-  padding-top: 8px;
-  padding-bottom: 8px;
   margin: 0;
   line-height: 26px;
   color: #000000;

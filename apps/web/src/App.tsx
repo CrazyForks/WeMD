@@ -38,7 +38,6 @@ const UpdateModal = lazy(() =>
 );
 import { MobileThemeSelector } from "./components/Theme/MobileThemeSelector";
 
-// Electron 更新事件数据类型
 interface UpdateEventData {
   latestVersion: string;
   currentVersion: string;

@@ -1,6 +1,6 @@
 export const luxuryGoldTheme = `/* 黑金奢华风格 */
 #wemd {
-    padding: 40px 22px;
+    padding: 5px 22px;
     max-width: 677px;
     margin: 0 auto;
     /* 强制宋体/衬线体，移动端显示优雅字体的关键 */

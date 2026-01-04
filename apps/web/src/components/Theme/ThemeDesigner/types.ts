@@ -34,6 +34,7 @@ export interface DesignerVariables {
 
   // 段落
   paragraphMargin: number;
+  paragraphPadding: number;
   paragraphColor: string;
   textIndent: boolean;
   textJustify: boolean;

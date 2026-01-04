@@ -9,173 +9,20 @@ import {
   Palette,
   Code,
   Download,
+  ChevronDown,
   Upload,
 } from "lucide-react";
-import {
-  createMarkdownParser,
-  processHtml,
-  convertCssToWeChatDarkMode,
-} from "@wemd/core";
 import { useEditorStore } from "../../store/editorStore";
 import { useThemeStore } from "../../store/themeStore";
 import { useHistoryStore } from "../../store/historyStore";
-import { useUITheme } from "../../hooks/useUITheme";
 import { platformActions } from "../../lib/platformAdapter";
 import {
   ThemeDesigner,
   type DesignerVariables,
   defaultVariables,
 } from "./ThemeDesigner";
+import { ThemeLivePreview } from "./ThemeLivePreview";
 import "./ThemePanel.css";
-
-// 主题预览用的示例 Markdown
-const PREVIEW_MARKDOWN = `# 一级标题示例
-
-这是一段**加粗文本**、*斜体文本*、~~删除线文本~~、==高亮文本==和 [链接示例](https://github.com/tenngoxars/WeMD)。
-正文段落通常需要设置行高和间距，以保证阅读体验。
-
----
-
-## 二级标题
-
-> 这是一个引用块示例，通常用于强调重要内容或摘录。
-
-| 平台 | 特点 | 适用程度 |
-| :--- | :--- | :--- |
-| 微信 | 封闭但流量大 | ⭐⭐⭐⭐⭐ |
-| 博客 | 自由但流量小 | ⭐⭐⭐ |
-
-### 三级标题
-
-这里演示脚注的使用：[WeChat Markdown](https://github.com/tenngoxars/WeMD "WeMD 是一款专为公众号设计的编辑器") 可以极大提升排版效率。
-
-> [!TIP]
-> 这是一个提示块示例。支持切换“默认彩色”或“跟随主题色”风格，让排版更统一。
-
-- 无序列表
-  - 嵌套的无序列表 A
-  - 嵌套的无序列表 B
-
-
-1. 有序列表
-   1. 嵌套的有序列表 A
-   2. 嵌套的有序列表 B
-
-
-#### 四级标题
-
-这里有 \`行内代码\` 样式，也可以用来表示 \`npm install wemd\` 等指令。
-
-\`\`\`js
-// 代码块示例
-function hello() {
-  console.log("Hello WeMD");
-}
-\`\`\`
-
-![WeMD 示例图片：不仅支持常规排版，更可以深度定制每一个细节。](https://img.wemd.app/example.jpg)
-`;
-
-// 实时预览组件 - 使用 iframe 隔离样式，并通过直接操作 DOM 避免重载导致的滚动重置
-function ThemeLivePreview({ css }: { css: string }) {
-  const parser = useMemo(() => createMarkdownParser(), []);
-  const uiTheme = useUITheme((state) => state.theme);
-  const isDarkMode = uiTheme === "dark";
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-
-  // 基础外壳文档，只加载一次
-  const shellDoc = useMemo(
-    () => `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      <style id="base-style">
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-          padding: 0;
-          font-size: 14px;
-          line-height: 1.6;
-          transition: background 0.2s, color 0.2s;
-        }
-        /* 隐藏滚动条直到内容加载 */
-        body:empty { display: none; }
-      </style>
-      <style id="theme-style"></style>
-    </head>
-    <body><div id="preview-root"></div></body>
-    </html>
-  `,
-    [],
-  );
-
-  const finalCss = useMemo(
-    () => (isDarkMode ? convertCssToWeChatDarkMode(css) : css),
-    [css, isDarkMode],
-  );
-  const html = useMemo(() => {
-    const rawHtml = parser.render(PREVIEW_MARKDOWN);
-    return processHtml(rawHtml, finalCss, true);
-  }, [parser, finalCss]);
-
-  // 同步更新 iframe 内容
-  useEffect(() => {
-    const iframe = iframeRef.current;
-    if (!iframe) return;
-
-    const updateContent = () => {
-      const doc = iframe.contentDocument || iframe.contentWindow?.document;
-      if (!doc) return;
-
-      const themeStyle = doc.getElementById("theme-style");
-      const root = doc.getElementById("preview-root");
-
-      if (themeStyle && root) {
-        // 保存当前滚动位置
-        const scrollY = iframe.contentWindow?.scrollY || 0;
-
-        // 更新颜色
-        doc.body.style.background = isDarkMode ? "#252526" : "#fff";
-        doc.body.style.color = isDarkMode ? "#d4d4d4" : "#000";
-
-        // 更新样式和 HTML
-        themeStyle.textContent = finalCss;
-        root.innerHTML = html;
-
-        // 恢复滚动位置
-        iframe.contentWindow?.scrollTo(0, scrollY);
-      }
-    };
-
-    // 如果 iframe 还没加载完，等待加载后再更新
-    const doc = iframe.contentDocument || iframe.contentWindow?.document;
-    if (
-      doc &&
-      doc.readyState === "complete" &&
-      doc.getElementById("preview-root")
-    ) {
-      updateContent();
-    } else {
-      iframe.onload = updateContent;
-    }
-  }, [html, finalCss, isDarkMode]);
-
-  return (
-    <div className="theme-live-preview">
-      <div className="preview-header-mini">
-        <span>实时预览</span>
-      </div>
-      <iframe
-        ref={iframeRef}
-        className="preview-iframe"
-        srcDoc={shellDoc}
-        title="主题预览"
-        sandbox="allow-same-origin"
-      />
-    </div>
-  );
-}
 
 interface ThemePanelProps {
   open: boolean;
@@ -191,16 +38,18 @@ export function ThemePanel({ open, onClose }: ThemePanelProps) {
   const duplicateTheme = useThemeStore((state) => state.duplicateTheme);
   const getAllThemes = useThemeStore((state) => state.getAllThemes);
   const exportTheme = useThemeStore((state) => state.exportTheme);
+  const exportThemeCSS = useThemeStore((state) => state.exportThemeCSS);
   const importTheme = useThemeStore((state) => state.importTheme);
   const customThemesFromStore = useThemeStore((state) => state.customThemes);
   const persistActiveSnapshot = useHistoryStore(
     (state) => state.persistActiveSnapshot,
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
-  // customThemes 变化时重新计算 allThemes
-
   const allThemes = useMemo(
-    () => getAllThemes(),
+    () => [
+      ...getAllThemes().filter((theme) => theme.isBuiltIn),
+      ...customThemesFromStore,
+    ],
     [getAllThemes, customThemesFromStore],
   );
   const [selectedThemeId, setSelectedThemeId] = useState<string>("");
@@ -214,15 +63,26 @@ export function ThemePanel({ open, onClose }: ThemePanelProps) {
   const [creationStep, setCreationStep] = useState<"select-mode" | "editing">(
     "select-mode",
   );
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [editorMode, setEditorMode] = useState<"visual" | "css">("visual");
-  // 用于检测是否有改动
   const [originalName, setOriginalName] = useState("");
   const [originalCss, setOriginalCss] = useState("");
 
   const selectedTheme = allThemes.find((t) => t.id === selectedThemeId);
   const isCustomTheme = selectedTheme && !selectedTheme.isBuiltIn;
-  // 检测是否有未保存的改动
+
+  useEffect(() => {
+    setExportMenuOpen(false);
+  }, [selectedThemeId, isCustomTheme]);
+
+  useEffect(() => {
+    if (!open) {
+      setExportMenuOpen(false);
+    }
+  }, [open]);
+
   const hasChanges =
     isCustomTheme && (nameInput !== originalName || cssInput !== originalCss);
 
@@ -254,8 +114,6 @@ export function ThemePanel({ open, onClose }: ThemePanelProps) {
       setVisualCss("");
     }
   }, [open, theme, allThemes]);
-
-  if (!open) return null;
 
   const handleSelectTheme = (themeId: string) => {
     const theme = allThemes.find((t) => t.id === themeId);
@@ -303,6 +161,33 @@ export function ThemePanel({ open, onClose }: ThemePanelProps) {
   const handleCssInputChange = (value: string) => {
     setCssInput(value);
   };
+
+  useEffect(() => {
+    if (!exportMenuOpen) return;
+
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (
+        exportMenuRef.current &&
+        !exportMenuRef.current.contains(event.target as Node)
+      ) {
+        setExportMenuOpen(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setExportMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [exportMenuOpen]);
 
   const handleApply = async () => {
     // 自动保存逻辑：如果是自定义主题且有未保存的更改，先执行保存
@@ -417,7 +302,8 @@ export function ThemePanel({ open, onClose }: ThemePanelProps) {
     toast.success("主题已复制");
   };
 
-  // 分组主题
+  if (!open) return null;
+
   const builtInThemes = allThemes.filter((t) => t.isBuiltIn);
   const customThemes = allThemes.filter((t) => !t.isBuiltIn);
   const previewCss =
@@ -656,14 +542,42 @@ export function ThemePanel({ open, onClose }: ThemePanelProps) {
                   <button className="btn-icon-text" onClick={handleDuplicate}>
                     <Copy size={16} /> 复制
                   </button>
-                  {selectedTheme?.editorMode === "visual" && (
+                  <div className="theme-export-menu" ref={exportMenuRef}>
                     <button
                       className="btn-icon-text"
-                      onClick={() => exportTheme(selectedThemeId)}
+                      onClick={() => setExportMenuOpen((open) => !open)}
+                      aria-haspopup="menu"
+                      aria-expanded={exportMenuOpen}
                     >
-                      <Download size={16} /> 导出
+                      <Download size={16} /> 导出 <ChevronDown size={14} />
                     </button>
-                  )}
+                    {exportMenuOpen && (
+                      <div className="theme-export-dropdown" role="menu">
+                        {selectedTheme?.editorMode === "visual" && (
+                          <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() => {
+                              exportTheme(selectedThemeId);
+                              setExportMenuOpen(false);
+                            }}
+                          >
+                            <Download size={16} /> JSON（支持可视化编辑）
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
+                            exportThemeCSS(selectedThemeId);
+                            setExportMenuOpen(false);
+                          }}
+                        >
+                          <Download size={16} /> CSS（不支持可视化编辑）
+                        </button>
+                      </div>
+                    )}
+                  </div>
                   <button
                     className="btn-icon-text btn-danger"
                     onClick={handleDeleteClick}

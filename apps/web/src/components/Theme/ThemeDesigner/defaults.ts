@@ -59,6 +59,7 @@ export const defaultVariables: DesignerVariables = {
 
   // 段落
   paragraphMargin: 16,
+  paragraphPadding: 0,
   paragraphColor: "#333",
   textIndent: false,
   textJustify: true,

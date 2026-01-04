@@ -1,6 +1,6 @@
 export const receiptTheme = `/* 购物小票风格 */
 #wemd {
-    padding: 40px 20px;
+    padding: 5px 20px;
     max-width: 677px;
     margin: 0 auto;
     /* 强制等宽/衬线字体，模拟打印机 */

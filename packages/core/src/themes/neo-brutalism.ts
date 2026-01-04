@@ -1,6 +1,6 @@
 export const neoBrutalismTheme = `/* 新粗野主义风格 */
 #wemd {
-    padding: 30px 20px;
+    padding: 5px 22px;
     max-width: 677px;
     margin: 0 auto;
     font-family: -apple-system, "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;

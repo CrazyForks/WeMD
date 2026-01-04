@@ -1,8 +1,4 @@
-/**
- * 编辑器状态管理
- * 只管理编辑器核心功能：Markdown 内容、文件路径、复制到微信
- * 主题相关功能已迁移到 themeStore.ts
- */
+// 编辑器状态管理（主题相关功能已迁移到 themeStore.ts）
 import { create } from "zustand";
 import { useThemeStore } from "./themeStore";
 import { copyToWechat as execCopyToWechat } from "../services/wechatCopyService";
@@ -15,30 +11,23 @@ export interface ResetOptions {
 }
 
 interface EditorStore {
-  // Markdown 内容
   markdown: string;
   setMarkdown: (markdown: string) => void;
 
-  // 编辑状态跟踪（通用，不依赖文件系统）
-  lastAutoSavedAt: Date | null; // 最后自动保存时间
-  isEditing: boolean; // 是否正在编辑（用于显示"编辑中"）
+  lastAutoSavedAt: Date | null;
+  isEditing: boolean;
   setLastAutoSavedAt: (time: Date | null) => void;
   setIsEditing: (editing: boolean) => void;
 
-  // 文件路径（本地文件模式）
   currentFilePath?: string;
   workspaceDir?: string;
   setFilePath: (path?: string) => void;
   setWorkspaceDir: (dir?: string) => void;
 
-  // 文档操作
   resetDocument: (options?: ResetOptions) => void;
   copyToWechat: () => void;
 }
 
-/**
- * 默认 Markdown 内容
- */
 export const defaultMarkdown = `# 欢迎使用 WeMD
 
 这是一个现代化的 Markdown 编辑器，专为**微信公众号**排版设计。

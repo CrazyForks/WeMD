@@ -1,3 +1,4 @@
+// 历史记录状态管理（使用 IndexedDB 持久化）
 import { create } from "zustand";
 import { useEditorStore } from "./editorStore";
 import {
@@ -18,6 +19,7 @@ interface HistoryStore {
   loading: boolean;
   filter: string;
   activeId: string | null;
+
   loadHistory: () => Promise<void>;
   setFilter: (value: string) => void;
   setActiveId: (id: string | null) => void;

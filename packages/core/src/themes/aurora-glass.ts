@@ -1,6 +1,6 @@
 export const auroraGlassTheme = `/* 极光玻璃风格 */
 #wemd {
-  padding: 24px 20px;
+  padding: 5px 20px;
   max-width: 677px;
   margin: 0 auto;
   font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;

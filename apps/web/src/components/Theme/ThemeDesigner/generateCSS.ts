@@ -191,7 +191,7 @@ export function generateCSS(v: DesignerVariables): string {
   return `/* 可视化设计器生成 */
 #wemd {
   font-family: ${v.fontFamily};
-  padding: 20px ${v.pagePadding ?? 8}px;
+  padding: 0 ${v.pagePadding ?? 8}px;
   color: ${v.paragraphColor};
 }
 #wemd figcaption {
@@ -215,6 +215,7 @@ export function generateCSS(v: DesignerVariables): string {
   font-size: ${v.fontSize};
   line-height: ${v.lineHeight};
   margin: ${v.paragraphMargin}px 0;
+  padding: ${v.paragraphPadding ?? 0}px 0;
   ${v.textIndent ? "text-indent: 2em;" : ""}
   ${v.textJustify ? "text-align: justify;" : ""}
 }

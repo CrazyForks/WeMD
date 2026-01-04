@@ -1,7 +1,4 @@
-/**
- * 主题状态管理
- * 管理主题选择、自定义主题 CRUD、主题持久化
- */
+// 主题状态管理
 import { create } from "zustand";
 import {
   builtInThemes,
@@ -11,9 +8,10 @@ import {
 import { convertCssToWeChatDarkMode } from "@wemd/core";
 import { generateCSS } from "../components/Theme/ThemeDesigner/generateCSS";
 
-// 深色转换缓存，避免重复转换同一段 CSS
+// 深色模式 CSS 转换缓存
 const darkCssCache = new Map<string, string>();
 const DARK_MARK = "/* wemd-wechat-dark-converted */";
+
 const hashCss = (css: string): string => {
   let hash = 0;
   for (let i = 0; i < css.length; i++) {
@@ -22,6 +20,7 @@ const hashCss = (css: string): string => {
   }
   return hash.toString(16);
 };
+
 const buildDarkCacheKey = (themeId: string, css: string) =>
   `${themeId}:${hashCss(css)}`;
 const clearDarkCssCache = () => darkCssCache.clear();
@@ -30,27 +29,34 @@ const clearDarkCssCache = () => darkCssCache.clear();
 const CUSTOM_THEMES_KEY = "wemd-custom-themes";
 const SELECTED_THEME_KEY = "wemd-selected-theme";
 
-// 检查 localStorage 是否可用
 const canUseLocalStorage = () =>
   typeof window !== "undefined" && typeof window.localStorage !== "undefined";
 
-// 从 localStorage 加载自定义主题（含迁移逻辑）
 const loadCustomThemes = (): CustomTheme[] => {
   if (!canUseLocalStorage()) return [];
   try {
     const stored = localStorage.getItem(CUSTOM_THEMES_KEY);
     if (!stored) return [];
     const themes = JSON.parse(stored) as CustomTheme[];
-    // 迁移：为缺少 editorMode 的旧主题设置默认值
+
     return themes.map((t) => {
-      if (t.editorMode) {
-        // 已有 editorMode，无需迁移
-        return t;
+      let newCss = t.css;
+
+      if (t.designerVariables) {
+        newCss = generateCSS(t.designerVariables);
       }
-      // 只有存在 designerVariables 才判定为可视化主题
-      // 仅有 CSS 注释不够安全：没有变量时 ThemeDesigner 会用默认值覆盖原 CSS
-      return {
+
+      const theme = {
         ...t,
+        css: newCss,
+      };
+
+      if (t.editorMode) {
+        return theme;
+      }
+
+      return {
+        ...theme,
         editorMode: t.designerVariables ? "visual" : "css",
       };
     });
@@ -139,7 +145,11 @@ interface ThemeStore {
   duplicateTheme: (id: string, newName: string) => CustomTheme;
 
   // 导入导出
+  /** 导出主题为 JSON 文件（含 designerVariables，可再次导入编辑） */
   exportTheme: (id: string) => void;
+  /** 导出主题为 CSS 文件（纯样式代码） */
+  exportThemeCSS: (id: string) => void;
+  /** 从 JSON 文件导入主题 */
   importTheme: (file: File) => Promise<boolean>;
 }
 
@@ -333,6 +343,29 @@ export const useThemeStore = create<ThemeStore>((set, get) => ({
     const a = document.createElement("a");
     a.href = url;
     a.download = `${theme.name}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  },
+
+  /**
+   * 导出主题为 CSS 文件
+   * @param id - 主题 ID
+   */
+  exportThemeCSS: (id: string) => {
+    const state = get();
+    const theme = state.customThemes.find((t) => t.id === id);
+    if (!theme) {
+      console.warn("主题未找到");
+      return;
+    }
+
+    const blob = new Blob([theme.css], {
+      type: "text/css",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${theme.name}.css`;
     a.click();
     URL.revokeObjectURL(url);
   },
