@@ -15,6 +15,8 @@ import {
 import { useEditorStore } from "../../store/editorStore";
 import { useThemeStore } from "../../store/themeStore";
 import { useHistoryStore } from "../../store/historyStore";
+import { useUITheme } from "../../hooks/useUITheme";
+import { SidebarFooter } from "../Sidebar/SidebarFooter";
 import type { HistorySnapshot } from "../../store/historyStore";
 
 const PAGE_SIZE = 50;
@@ -243,6 +245,8 @@ export function IndexedHistoryPanel() {
   }, [filter]);
 
   const hasEntries = filteredHistory.length > 0;
+  // const uiTheme = useUITheme((state) => state.theme);
+  // const logoSrc = uiTheme === "dark" ? "/favicon-light.svg" : "/favicon-dark.svg";
 
   return (
     <>
@@ -343,46 +347,7 @@ export function IndexedHistoryPanel() {
             </div>
           </div>
         )}
-        <div className="history-sidebar-footer">
-          <div className="history-footer-brand">
-            <div className="history-footer-logo">
-              <img src="./favicon-dark.svg" alt="Logo" />
-            </div>
-            <div className="history-footer-info">
-              <span className="history-footer-name">WeMD</span>
-              <span className="history-footer-version">v{__APP_VERSION__}</span>
-            </div>
-          </div>
-          <div className="history-footer-links">
-            <a
-              href="https://github.com/tenngoxars/WeMD"
-              target="_blank"
-              rel="noopener noreferrer"
-              data-tooltip="GitHub 仓库"
-              aria-label="GitHub 仓库"
-            >
-              <Github size={16} />
-            </a>
-            <a
-              href="https://wemd.app"
-              target="_blank"
-              rel="noopener noreferrer"
-              data-tooltip="官方网站"
-              aria-label="官方网站"
-            >
-              <Globe size={16} />
-            </a>
-            <a
-              href="https://wemd.app/docs"
-              target="_blank"
-              rel="noopener noreferrer"
-              data-tooltip="帮助文档"
-              aria-label="帮助文档"
-            >
-              <BookOpen size={16} />
-            </a>
-          </div>
-        </div>
+        <SidebarFooter />
       </aside>
       {actionMenuId &&
         menuEntry &&

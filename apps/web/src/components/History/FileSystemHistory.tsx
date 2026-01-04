@@ -4,6 +4,8 @@ import toast from "react-hot-toast";
 import { Plus, Trash2, Edit2, Save } from "lucide-react";
 import { useEditorStore } from "../../store/editorStore";
 import { useThemeStore } from "../../store/themeStore";
+import { useUITheme } from "../../hooks/useUITheme";
+import { SidebarFooter } from "../Sidebar/SidebarFooter";
 import type { StorageAdapter } from "../../storage/StorageAdapter";
 import type { FileItem as StorageFileItem } from "../../storage/types";
 
@@ -164,6 +166,10 @@ themeName: ${themeState.themeName}
     }
   };
 
+  const uiTheme = useUITheme((state) => state.theme);
+  const logoSrc =
+    uiTheme === "dark" ? "/favicon-light.svg" : "/favicon-dark.svg";
+
   return (
     <aside className="history-sidebar">
       <div className="history-header">
@@ -261,6 +267,7 @@ themeName: ${themeState.themeName}
           </div>
         )}
       </div>
+      <SidebarFooter />
       {deleteTarget &&
         createPortal(
           <div

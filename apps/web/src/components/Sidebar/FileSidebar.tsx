@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import { createPortal } from "react-dom";
 import toast from "react-hot-toast";
+import { useUITheme } from "../../hooks/useUITheme";
+import { SidebarFooter } from "./SidebarFooter";
 import "./FileSidebar.css";
 
 import type { FileItem } from "../../store/fileTypes";
@@ -242,46 +244,7 @@ export function FileSidebar() {
         </div>
       </div>
 
-      <div className="file-sidebar-footer">
-        <div className="fs-footer-brand">
-          <div className="fs-footer-logo">
-            <img src="./favicon-dark.svg" alt="Logo" />
-          </div>
-          <div className="fs-footer-info">
-            <span className="fs-footer-name">WeMD</span>
-            <span className="fs-footer-version">v{__APP_VERSION__}</span>
-          </div>
-        </div>
-        <div className="fs-footer-links">
-          <a
-            href="https://github.com/tenngoxars/WeMD"
-            target="_blank"
-            rel="noopener noreferrer"
-            data-tooltip="GitHub 仓库"
-            aria-label="GitHub 仓库"
-          >
-            <Github size={16} />
-          </a>
-          <a
-            href="https://wemd.app"
-            target="_blank"
-            rel="noopener noreferrer"
-            data-tooltip="官方网站"
-            aria-label="官方网站"
-          >
-            <Globe size={16} />
-          </a>
-          <a
-            href="https://wemd.app/docs"
-            target="_blank"
-            rel="noopener noreferrer"
-            data-tooltip="帮助文档"
-            aria-label="帮助文档"
-          >
-            <BookOpen size={16} />
-          </a>
-        </div>
-      </div>
+      <SidebarFooter />
 
       {/* Context Menu Portal */}
       {menuOpen &&
