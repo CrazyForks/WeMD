@@ -1,35 +1,28 @@
 import type { SectionProps } from "../types";
 import { ColorSelector } from "../../ColorSelector";
+import { SliderInput } from "../SliderInput";
 
 export function ImageSection({ variables, updateVariable }: SectionProps) {
   return (
     <div className="designer-section">
       <div className="designer-field">
-        <label>边距: {variables.imageMargin}px</label>
-        <input
-          type="range"
-          className="designer-slider"
+        <label>边距</label>
+        <SliderInput
+          value={variables.imageMargin}
+          onChange={(val) => updateVariable("imageMargin", val)}
           min={0}
           max={40}
           step={4}
-          value={variables.imageMargin}
-          onChange={(e) =>
-            updateVariable("imageMargin", Number(e.target.value))
-          }
         />
       </div>
 
       <div className="designer-field">
-        <label>圆角: {variables.imageBorderRadius}px</label>
-        <input
-          type="range"
-          className="designer-slider"
+        <label>圆角</label>
+        <SliderInput
+          value={variables.imageBorderRadius}
+          onChange={(val) => updateVariable("imageBorderRadius", val)}
           min={0}
           max={16}
-          value={variables.imageBorderRadius}
-          onChange={(e) =>
-            updateVariable("imageBorderRadius", Number(e.target.value))
-          }
         />
       </div>
 

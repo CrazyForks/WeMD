@@ -162,17 +162,30 @@ export function ColorSelector({
     }
   };
 
+  // 透明背景样式
+  const transparentPattern = {
+    backgroundImage:
+      "linear-gradient(45deg, #e6e6e6 25%, transparent 25%), linear-gradient(-45deg, #e6e6e6 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e6e6e6 75%), linear-gradient(-45deg, transparent 75%, #e6e6e6 75%)",
+    backgroundSize: "6px 6px",
+    backgroundPosition: "0 0, 0 3px, 3px -3px, -3px 0px",
+    backgroundColor: "#fff",
+  };
+
   return (
     <div className="designer-colors">
       {uniquePresets.map((item, idx) => {
         const itemResolved = normalizeColor(item.displayColor || item.value);
         const isActive = itemResolved === currentValueResolved;
+        const isTransparent = itemResolved === "TRANSPARENT";
 
         return (
           <button
             key={`${item.value}-${idx}`}
             className={`color-btn ${isActive ? "active" : ""}`}
-            style={{ backgroundColor: itemResolved }}
+            style={{
+              backgroundColor: itemResolved,
+              ...(isTransparent ? transparentPattern : {}),
+            }}
             onClick={() => onChange(item.value)}
             title={item.label || item.value}
           />
@@ -186,6 +199,9 @@ export function ColorSelector({
             backgroundColor: currentValueResolved.startsWith("#")
               ? currentValueResolved
               : "transparent",
+            ...(currentValueResolved === "TRANSPARENT"
+              ? transparentPattern
+              : {}),
           }}
           onClick={() => onChange(customColor)}
           title="自定义颜色"

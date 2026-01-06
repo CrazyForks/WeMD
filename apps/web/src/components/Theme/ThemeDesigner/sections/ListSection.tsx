@@ -1,5 +1,6 @@
 import type { SectionProps } from "../types";
 import { ColorSelector } from "../../ColorSelector";
+import { SliderInput } from "../SliderInput";
 import {
   ulStyleOptions,
   olStyleOptions,
@@ -28,17 +29,13 @@ export function ListSection({ variables, updateVariable }: SectionProps) {
       </div>
 
       <div className="designer-field">
-        <label>列表项间距: {variables.listSpacing}px</label>
-        <input
-          type="range"
-          className="designer-slider"
+        <label>列表项间距</label>
+        <SliderInput
+          value={variables.listSpacing}
+          onChange={(val) => updateVariable("listSpacing", val)}
           min={0}
           max={20}
           step={2}
-          value={variables.listSpacing}
-          onChange={(e) =>
-            updateVariable("listSpacing", Number(e.target.value))
-          }
         />
       </div>
 

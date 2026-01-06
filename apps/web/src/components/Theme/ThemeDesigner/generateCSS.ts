@@ -27,10 +27,22 @@ export function getQuotePresetCSS(
   color: string,
   bgColor: string,
   textColor: string,
+  borderWidth: number,
+  borderStyle: string,
+  padding: number,
+  centered?: boolean,
 ): { base: string; extra: string } {
   const preset = quoteStylePresets.find((p) => p.id === presetId);
   if (!preset) return { base: "", extra: "" };
-  const css = preset.cssTemplate(color, bgColor, textColor);
+  const css = preset.cssTemplate(
+    color,
+    bgColor,
+    textColor,
+    borderWidth,
+    borderStyle,
+    padding,
+    centered,
+  );
   return { base: css.base || "", extra: css.extra || "" };
 }
 
@@ -175,9 +187,13 @@ export function generateCSS(v: DesignerVariables): string {
   );
   const quotePreset = getQuotePresetCSS(
     v.quotePreset,
-    v.primaryColor,
+    v.quoteBorderColor,
     v.quoteBackground,
     v.quoteTextColor,
+    v.quoteBorderWidth,
+    v.quoteBorderStyle,
+    v.quotePaddingX ?? 20,
+    v.quoteTextCentered,
   );
   const headingExtras = [
     h1Preset.extra,
@@ -256,14 +272,15 @@ export function generateCSS(v: DesignerVariables): string {
 }
 #wemd h4 { margin: ${v.h4.marginTop}px 0 ${v.h4.marginBottom}px; ${v.h4.centered ? "text-align: center;" : ""} }
 
-/* 统一引用样式处理 */
 #wemd blockquote, 
 #wemd .multiquote-1, 
 #wemd .multiquote-2, 
 #wemd .multiquote-3 {
   ${quotePreset.base}
-  margin: 24px 0 !important;
+  margin: ${v.paragraphMargin}px 0 !important;
   border-left-color: ${v.quoteBorderColor};
+  border-left-style: ${v.quoteBorderStyle};
+  padding: ${v.quotePaddingY}px ${v.quotePaddingX}px;
 }
 #wemd blockquote p,
 #wemd .multiquote-1 p,
@@ -271,6 +288,9 @@ export function generateCSS(v: DesignerVariables): string {
 #wemd .multiquote-3 p { 
   color: ${v.quoteTextColor}; 
   margin: 0 !important;
+  font-size: ${v.quoteFontSize}px;
+  line-height: ${v.quoteLineHeight};
+  ${v.quoteTextCentered ? "text-align: center !important;" : ""}
 }
 
 #wemd pre code.hljs {
@@ -287,7 +307,7 @@ export function generateCSS(v: DesignerVariables): string {
 #wemd pre.custom {
   position: relative;
   overflow: visible;
-  margin: 16px 0;
+  margin: ${v.paragraphMargin}px 0;
 }
 
 ${
@@ -372,7 +392,7 @@ ${getCodeThemeCSS(v.codeTheme)}
 #wemd table {
   width: 100%;
   border-collapse: collapse;
-  margin: 16px 0;
+  margin: ${v.paragraphMargin}px 0;
 }
 
 #wemd th {
@@ -511,7 +531,7 @@ ${
   border-left-width: 4px;
   border-left-style: solid;
   border-radius: 4px;
-  margin: 16px 0;
+  margin: ${v.paragraphMargin}px 0;
   padding: 12px 16px;
 }
 
@@ -523,9 +543,9 @@ ${
   border-radius: ${v.imageBorderRadius}px;
 }
 
-#wemd ul { list-style-type: ${v.ulStyle}; padding-left: 20px; margin: 16px 0; }
+#wemd ul { list-style-type: ${v.ulStyle}; padding-left: 20px; margin: ${v.paragraphMargin}px 0; }
 #wemd ul ul { list-style-type: ${v.ulStyleL2}; margin: 4px 0; }
-#wemd ol { list-style-type: ${v.olStyle}; padding-left: 20px; margin: 16px 0; }
+#wemd ol { list-style-type: ${v.olStyle}; padding-left: 20px; margin: ${v.paragraphMargin}px 0; }
 #wemd ol ol { list-style-type: ${v.olStyleL2}; margin: 4px 0; }
 #wemd li { margin: ${v.listSpacing}px 0; line-height: ${v.lineHeight}; }
 
@@ -598,6 +618,10 @@ ${quotePreset.extra}
 
 #wemd .callout-icon {
   font-size: 18px;
+}
+
+#wemd .callout p {
+  margin: 0 !important;
 }
 
 #wemd .callout-note { border-left: 4px solid #6366f1; background: #f5f5ff; }

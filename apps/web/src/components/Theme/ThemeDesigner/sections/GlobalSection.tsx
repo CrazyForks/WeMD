@@ -1,5 +1,6 @@
 import type { GlobalSectionProps } from "../types";
 import { ColorSelector } from "../../ColorSelector";
+import { SliderInput } from "../SliderInput";
 import {
   fontFamilyOptions,
   fontSizeOptions,
@@ -61,32 +62,24 @@ export function GlobalSection({
       </div>
 
       <div className="designer-field">
-        <label>段落内部间距: {variables.paragraphPadding ?? 0}px</label>
-        <input
-          type="range"
-          className="designer-slider"
+        <label>段落内部间距</label>
+        <SliderInput
+          value={variables.paragraphPadding ?? 0}
+          onChange={(val) => updateVariable("paragraphPadding", val)}
           min={0}
           max={20}
           step={0.1}
-          value={variables.paragraphPadding ?? 0}
-          onChange={(e) =>
-            updateVariable("paragraphPadding", Number(e.target.value))
-          }
         />
       </div>
 
       <div className="designer-field">
-        <label>页面两侧间距: {variables.pagePadding}px</label>
-        <input
-          type="range"
-          className="designer-slider"
+        <label>页面两侧间距</label>
+        <SliderInput
+          value={variables.pagePadding || 0}
+          onChange={(val) => updateVariable("pagePadding", val)}
           min={0}
           max={48}
           step={0.1}
-          value={variables.pagePadding || 0}
-          onChange={(e) =>
-            updateVariable("pagePadding", Number(e.target.value))
-          }
         />
       </div>
 

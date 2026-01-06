@@ -507,3 +507,67 @@
 }
 
 /* 移除之前的无效 mini 样式 */
+
+/* SliderInput 组件样式 - 使用高优先级选择器 */
+.slider-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.slider-input-wrapper .designer-slider {
+  flex: 1;
+  min-width: 0;
+}
+
+.slider-input-wrapper .slider-input-box {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  background: var(--bg-tertiary);
+  border-radius: 10px;
+  padding: 2px 6px;
+  height: 22px;
+  box-sizing: border-box;
+}
+
+.slider-input-wrapper .slider-input-box input.slider-number-input {
+  width: 26px;
+  height: 18px;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: transparent;
+  font-size: 11px;
+  text-align: center;
+  color: var(--text-primary);
+  font-weight: 500;
+  font-family: inherit;
+  box-sizing: border-box;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: textfield;
+}
+
+.slider-input-wrapper .slider-input-box input.slider-number-input:focus {
+  outline: none;
+}
+
+/* 隐藏数字输入框的上下箭头 */
+.slider-input-wrapper
+  .slider-input-box
+  input.slider-number-input::-webkit-outer-spin-button,
+.slider-input-wrapper
+  .slider-input-box
+  input.slider-number-input::-webkit-inner-spin-button {
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.slider-input-wrapper .slider-input-box .slider-input-unit {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  margin-left: 1px;
+  line-height: 1;
+}

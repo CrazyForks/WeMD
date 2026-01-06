@@ -21,6 +21,7 @@ import {
   type DesignerVariables,
   defaultVariables,
 } from "./ThemeDesigner";
+import { generateCSS } from "./ThemeDesigner/generateCSS";
 import { ThemeLivePreview } from "./ThemeLivePreview";
 import "./ThemePanel.css";
 
@@ -86,8 +87,12 @@ export function ThemePanel({ open, onClose }: ThemePanelProps) {
   const hasChanges =
     isCustomTheme && (nameInput !== originalName || cssInput !== originalCss);
 
+  const prevOpenRef = useRef(false);
   useEffect(() => {
-    if (open) {
+    const wasOpen = prevOpenRef.current;
+    prevOpenRef.current = open;
+
+    if (open && !wasOpen) {
       const currentTheme = allThemes.find((t) => t.id === theme);
       if (currentTheme) {
         setSelectedThemeId(currentTheme.id);
@@ -245,16 +250,22 @@ export function ThemePanel({ open, onClose }: ThemePanelProps) {
       setIsCreating(false);
       toast.success("主题创建成功");
     } else if (isCustomTheme) {
-      // 更新现有主题（可视化主题同时保存变量）
+      // 更新现有主题（可视化主题从 designerVariables 重新生成 CSS 以确保同步）
+      const isVisualMode =
+        selectedTheme?.editorMode === "visual" && designerVariables;
+      const cssToSave = isVisualMode
+        ? generateCSS(designerVariables)
+        : cssInput;
+
       const updates: {
         name: string;
         css: string;
         designerVariables?: DesignerVariables;
       } = {
         name: nameInput.trim() || "未命名主题",
-        css: cssInput,
+        css: cssToSave,
       };
-      if (selectedTheme?.editorMode === "visual" && designerVariables) {
+      if (isVisualMode) {
         updates.designerVariables = designerVariables;
       }
       updateTheme(selectedThemeId, updates);
@@ -306,8 +317,11 @@ export function ThemePanel({ open, onClose }: ThemePanelProps) {
 
   const builtInThemes = allThemes.filter((t) => t.isBuiltIn);
   const customThemes = allThemes.filter((t) => !t.isBuiltIn);
-  const previewCss =
-    isCreating && editorMode === "visual" ? visualCss || cssInput : cssInput;
+  // 可视化模式下（无论是创建还是编辑），优先使用 visualCss（编辑器生成的最新 CSS）
+  const isVisualEditing =
+    (isCreating && editorMode === "visual") ||
+    (!isCreating && isCustomTheme && selectedTheme?.editorMode === "visual");
+  const previewCss = isVisualEditing ? visualCss || cssInput : cssInput;
   const canSave =
     nameInput.trim() &&
     (editorMode === "visual"

@@ -69,6 +69,13 @@ export const defaultVariables: DesignerVariables = {
   quoteBorderColor: "#ddd",
   quoteTextColor: "#666",
   quotePreset: "left-border",
+  quoteBorderStyle: "solid",
+  quoteBorderWidth: 4,
+  quotePaddingX: 16,
+  quotePaddingY: 12,
+  quoteFontSize: 16,
+  quoteLineHeight: 1.6,
+  quoteTextCentered: false,
 
   // 代码
   codeBackground: "#f5f5f5",

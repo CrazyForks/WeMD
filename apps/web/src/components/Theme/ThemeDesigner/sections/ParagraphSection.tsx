@@ -1,22 +1,19 @@
 import type { SectionProps } from "../types";
 
 import { ColorSelector } from "../../ColorSelector";
+import { SliderInput } from "../SliderInput";
 
 export function ParagraphSection({ variables, updateVariable }: SectionProps) {
   return (
     <div className="designer-section">
       <div className="designer-field">
-        <label>段落间距: {variables.paragraphMargin}px</label>
-        <input
-          type="range"
-          className="designer-slider"
+        <label>段落间距</label>
+        <SliderInput
+          value={variables.paragraphMargin}
+          onChange={(val) => updateVariable("paragraphMargin", val)}
           min={8}
           max={32}
           step={2}
-          value={variables.paragraphMargin}
-          onChange={(e) =>
-            updateVariable("paragraphMargin", Number(e.target.value))
-          }
         />
       </div>
 
@@ -74,26 +71,22 @@ export function ParagraphSection({ variables, updateVariable }: SectionProps) {
         />
       </div>
       <div className="designer-field">
-        <label>高度: {variables.hrHeight}px</label>
-        <input
-          type="range"
-          className="designer-slider"
+        <label>高度</label>
+        <SliderInput
+          value={variables.hrHeight}
+          onChange={(val) => updateVariable("hrHeight", val)}
           min={1}
           max={4}
-          value={variables.hrHeight}
-          onChange={(e) => updateVariable("hrHeight", Number(e.target.value))}
         />
       </div>
       <div className="designer-field">
-        <label>上下边距: {variables.hrMargin}px</label>
-        <input
-          type="range"
-          className="designer-slider"
+        <label>上下边距</label>
+        <SliderInput
+          value={variables.hrMargin}
+          onChange={(val) => updateVariable("hrMargin", val)}
           min={10}
           max={60}
           step={5}
-          value={variables.hrMargin}
-          onChange={(e) => updateVariable("hrMargin", Number(e.target.value))}
         />
       </div>
     </div>

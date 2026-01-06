@@ -1,5 +1,6 @@
 import type { HeadingSectionProps, HeadingLevel } from "../types";
 import { ColorSelector } from "../../ColorSelector";
+import { SliderInput } from "../SliderInput";
 import {
   headingSizePresets,
   marginPresets,
@@ -74,16 +75,12 @@ export function HeadingSection({
       </div>
 
       <div className="designer-field">
-        <label>字号: {variables[activeHeading].fontSize}px</label>
-        <input
-          type="range"
-          className="designer-slider"
+        <label>字号</label>
+        <SliderInput
+          value={variables[activeHeading].fontSize}
+          onChange={(val) => updateHeading(activeHeading, { fontSize: val })}
           min={headingSizePresets[activeHeading].min}
           max={headingSizePresets[activeHeading].max}
-          value={variables[activeHeading].fontSize}
-          onChange={(e) =>
-            updateHeading(activeHeading, { fontSize: Number(e.target.value) })
-          }
         />
       </div>
 
@@ -108,19 +105,15 @@ export function HeadingSection({
       </div>
 
       <div className="designer-field">
-        <label>字间距: {variables[activeHeading].letterSpacing}px</label>
-        <input
-          type="range"
-          className="designer-slider"
+        <label>字间距</label>
+        <SliderInput
+          value={variables[activeHeading].letterSpacing ?? 0}
+          onChange={(val) =>
+            updateHeading(activeHeading, { letterSpacing: val })
+          }
           min={0}
           max={10}
           step={0.5}
-          value={variables[activeHeading].letterSpacing}
-          onChange={(e) =>
-            updateHeading(activeHeading, {
-              letterSpacing: Number(e.target.value),
-            })
-          }
         />
       </div>
 
@@ -134,34 +127,26 @@ export function HeadingSection({
       </div>
 
       <div className="designer-field">
-        <label>上边距: {variables[activeHeading].marginTop}px</label>
-        <input
-          type="range"
-          className="designer-slider"
+        <label>上边距</label>
+        <SliderInput
+          value={variables[activeHeading].marginTop}
+          onChange={(val) => updateHeading(activeHeading, { marginTop: val })}
           min={marginPresets.min}
           max={marginPresets.max}
           step={marginPresets.step}
-          value={variables[activeHeading].marginTop}
-          onChange={(e) =>
-            updateHeading(activeHeading, { marginTop: Number(e.target.value) })
-          }
         />
       </div>
 
       <div className="designer-field">
-        <label>下边距: {variables[activeHeading].marginBottom}px</label>
-        <input
-          type="range"
-          className="designer-slider"
+        <label>下边距</label>
+        <SliderInput
+          value={variables[activeHeading].marginBottom}
+          onChange={(val) =>
+            updateHeading(activeHeading, { marginBottom: val })
+          }
           min={marginPresets.min}
           max={marginPresets.max}
           step={marginPresets.step}
-          value={variables[activeHeading].marginBottom}
-          onChange={(e) =>
-            updateHeading(activeHeading, {
-              marginBottom: Number(e.target.value),
-            })
-          }
         />
       </div>
     </div>

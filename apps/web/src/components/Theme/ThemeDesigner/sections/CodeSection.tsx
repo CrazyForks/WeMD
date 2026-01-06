@@ -1,5 +1,6 @@
 import type { SectionProps, DesignerVariables } from "../types";
 import { ColorSelector } from "../../ColorSelector";
+import { SliderInput } from "../SliderInput";
 import {
   inlineCodeStyleOptions,
   codeBlockThemeOptions,
@@ -68,16 +69,12 @@ export function CodeSection({
 
       <div className="designer-group-label mt-4">代码块</div>
       <div className="designer-field">
-        <label>字号: {variables.codeFontSize}px</label>
-        <input
-          type="range"
-          className="designer-slider"
+        <label>字号</label>
+        <SliderInput
+          value={variables.codeFontSize}
+          onChange={(val) => updateVariable("codeFontSize", val)}
           min={12}
           max={16}
-          value={variables.codeFontSize}
-          onChange={(e) =>
-            updateVariable("codeFontSize", Number(e.target.value))
-          }
         />
       </div>
 

@@ -44,6 +44,13 @@ export interface DesignerVariables {
   quoteBorderColor: string;
   quoteTextColor: string;
   quotePreset: string;
+  quoteBorderStyle: "solid" | "dashed" | "dotted" | "double";
+  quoteBorderWidth: number;
+  quotePaddingX: number;
+  quotePaddingY: number;
+  quoteFontSize: number;
+  quoteLineHeight: number;
+  quoteTextCentered: boolean;
 
   // 代码
   codeBackground: string;
