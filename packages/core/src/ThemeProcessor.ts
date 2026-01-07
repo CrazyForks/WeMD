@@ -1,10 +1,8 @@
 import juice from "juice";
 
-// 常量定义
 const DATA_TOOL = "WeMD编辑器";
 const SECTION_ID = "wemd";
 
-// 需要添加 data-tool 属性的块级元素
 const BLOCK_TAGS = [
   "p",
   "h1",
@@ -45,9 +43,7 @@ export const processHtml = (
   BLOCK_TAGS.forEach((tag) => {
     const regex = new RegExp(`<${tag}(\\s+[^>]*|)>`, "gi");
     html = html.replace(regex, (match, attributes) => {
-      // 检查 data-tool 是否已存在，避免重复
       if (match.includes("data-tool=")) return match;
-      // attributes 包含前导空格（如果存在），或者为空字符串
       return `<${tag} data-tool="${DATA_TOOL}"${attributes}>`;
     });
   });
@@ -103,15 +99,17 @@ export const processHtml = (
       `<code$1>${macBarHtml}`,
     );
 
-    // 移除 CSS 伪元素规则，避免重复
     css = css.replace(
       /#wemd[^{]*pre[^{]*::before\s*\{[^}]*#ff5f56[^}]*\}/gi,
       "",
     );
   }
 
-  // 将 HTML 包裹在 id="wemd" 的 section 中，以便 juice 能够匹配以 #wemd 开头的选择器
-  const wrappedHtml = `<section id="${SECTION_ID}">${html}</section>`;
+  // 包裹在 section#wemd 中，复制时添加透明背景防止某些浏览器保留选区背景色
+  const bgStyle = inlinePseudoElements
+    ? ' style="background:transparent;background-color:transparent;"'
+    : "";
+  const wrappedHtml = `<section id="${SECTION_ID}"${bgStyle}>${html}</section>`;
 
   if (!inlineStyles) {
     return wrappedHtml;
@@ -123,12 +121,9 @@ export const processHtml = (
       preserveImportant: true,
     });
 
-    // 保留 section#wemd 包裹层以保持 #wemd 样式（边距、最大宽度、边框等）
-    // 这与遗留行为一致，其中 #wemd 样式应用于容器
     return res;
   } catch (e) {
     console.error("Juice inline error:", e);
-    // 返回包装后的 HTML，即使 juice 处理失败
     return wrappedHtml;
   }
 };
