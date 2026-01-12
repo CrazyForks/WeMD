@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useMemo, useCallback } from "react";
+import mermaid from "mermaid";
 import { createMarkdownParser, processHtml } from "@wemd/core";
 import { useEditorStore } from "../../store/editorStore";
 import { useThemeStore } from "../../store/themeStore";
@@ -77,6 +78,33 @@ export function MarkdownPreview() {
 
     return () => clearTimeout(timer);
   }, [html, markdown]);
+
+  useEffect(() => {
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: "default",
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!previewRef.current || !html) return;
+
+    const mermaidBlocks = previewRef.current.querySelectorAll(".mermaid");
+    if (mermaidBlocks.length === 0) return;
+
+    // 延迟渲染以确保 DOM 更新完成
+    const timer = setTimeout(() => {
+      mermaid
+        .run({
+          nodes: mermaidBlocks as unknown as HTMLElement[],
+        })
+        .catch((e) => {
+          console.error("Mermaid render error:", e);
+        });
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [html]);
 
   // 处理预览栏滚动事件
   const handlePreviewScroll = useCallback(() => {

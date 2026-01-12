@@ -37,6 +37,12 @@ export const createMarkdownParser = () => {
   const markdownParser: MarkdownIt = new MarkdownIt({
     html: true,
     highlight: (str: string, lang: string): string => {
+      // Mermaid 图表：输出 pre.mermaid 让前端渲染
+      if (lang === "mermaid") {
+        const escaped = markdownParser.utils.escapeHtml(str);
+        return `<pre class="mermaid">\n${escaped}\n</pre>\n`;
+      }
+
       if (lang === undefined || lang === "") {
         lang = "bash";
       }
