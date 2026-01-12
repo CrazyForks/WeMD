@@ -4,7 +4,13 @@ import { SliderInput } from "../SliderInput";
 import {
   ulStyleOptions,
   olStyleOptions,
+  fontSizeOptions,
 } from "../../../../config/styleOptions";
+
+const LIST_FONT_SIZE_OPTIONS = [
+  { label: "跟随全局", value: "inherit" },
+  ...fontSizeOptions.map((opt) => ({ label: opt.label, value: opt.value })),
+];
 
 export function ListSection({ variables, updateVariable }: SectionProps) {
   return (
@@ -37,6 +43,35 @@ export function ListSection({ variables, updateVariable }: SectionProps) {
           max={20}
           step={2}
         />
+      </div>
+
+      <div className="designer-field mt-2">
+        <label>无序列表字号</label>
+        <div className="designer-options">
+          {LIST_FONT_SIZE_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              className={`option-btn ${(variables.ulFontSize ?? "inherit") === opt.value ? "active" : ""}`}
+              onClick={() => updateVariable("ulFontSize", opt.value)}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="designer-field">
+        <label>有序列表字号</label>
+        <div className="designer-options">
+          {LIST_FONT_SIZE_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              className={`option-btn ${(variables.olFontSize ?? "inherit") === opt.value ? "active" : ""}`}
+              onClick={() => updateVariable("olFontSize", opt.value)}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="designer-field">

@@ -20,6 +20,8 @@ vi.mock("../../lib/platformAdapter", () => ({
 // Mock ThemeDesigner to avoid complex dependencies
 vi.mock("../../components/Theme/ThemeDesigner", () => ({
   ThemeDesigner: () => <div data-testid="theme-designer">Theme Designer</div>,
+  defaultVariables: {},
+  generateCSS: () => "",
 }));
 
 describe("ThemePanel", () => {

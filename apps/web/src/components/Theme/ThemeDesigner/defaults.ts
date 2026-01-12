@@ -122,6 +122,8 @@ export const defaultVariables: DesignerVariables = {
   listSpacing: 4,
   listMarkerColor: primaryColorOptions[0].value,
   listMarkerColorL2: primaryColorOptions[0].value,
+  ulFontSize: "inherit",
+  olFontSize: "inherit",
 
   // 脚注
   footnoteColor: "",

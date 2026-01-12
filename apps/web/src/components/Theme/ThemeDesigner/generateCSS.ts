@@ -543,9 +543,9 @@ ${
   border-radius: ${v.imageBorderRadius}px;
 }
 
-#wemd ul { list-style-type: ${v.ulStyle}; padding-left: 20px; margin: ${v.paragraphMargin}px 0; }
+#wemd ul { list-style-type: ${v.ulStyle}; padding-left: 20px; margin: ${v.paragraphMargin}px 0; font-size: ${!v.ulFontSize || v.ulFontSize === "inherit" ? v.fontSize : v.ulFontSize}; }
 #wemd ul ul { list-style-type: ${v.ulStyleL2}; margin: 4px 0; }
-#wemd ol { list-style-type: ${v.olStyle}; padding-left: 20px; margin: ${v.paragraphMargin}px 0; }
+#wemd ol { list-style-type: ${v.olStyle}; padding-left: 20px; margin: ${v.paragraphMargin}px 0; font-size: ${!v.olFontSize || v.olFontSize === "inherit" ? v.fontSize : v.olFontSize}; }
 #wemd ol ol { list-style-type: ${v.olStyleL2}; margin: 4px 0; }
 #wemd li { margin: ${v.listSpacing}px 0; line-height: ${v.lineHeight}; }
 

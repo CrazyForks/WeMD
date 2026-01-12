@@ -97,6 +97,8 @@ export interface DesignerVariables {
   listSpacing: number;
   listMarkerColor: string;
   listMarkerColorL2: string;
+  ulFontSize: string;
+  olFontSize: string;
 
   // 脚注
   footnoteColor: string;
