@@ -69,17 +69,43 @@ function getWindowIcon() {
     return img.isEmpty() ? null : img;
 }
 
-function getUniqueFilePath(dir: string, filename: string): string {
-    const parsed = path.parse(filename);
-    const base = parsed.name;
-    const ext = parsed.ext || '.md';
-    let candidate = path.join(dir, `${base}${ext}`);
+// 检查文件是否存在并生成带编号的唯一路径
+function getUniqueFilePath(targetPath: string): string {
+    const dir = path.dirname(targetPath);
+    const ext = path.extname(targetPath);
+    const name = path.basename(targetPath, ext); // 不含扩展名的文件名
+
+    let candidate = targetPath;
     let counter = 1;
     while (fs.existsSync(candidate)) {
-        candidate = path.join(dir, `${base} (${counter})${ext}`);
+        candidate = path.join(dir, `${name} (${counter})${ext}`);
         counter += 1;
     }
     return candidate;
+}
+
+function isPathInsideWorkspace(targetPath: string): boolean {
+    if (!workspaceDir) return false;
+    const workspaceResolvedRaw = path.resolve(workspaceDir);
+    const workspaceRoot = path.parse(workspaceResolvedRaw).root;
+    const workspaceResolved =
+        workspaceResolvedRaw === workspaceRoot
+            ? workspaceResolvedRaw
+            : workspaceResolvedRaw.replace(/[\\/]+$/, '');
+    const targetResolved = path.resolve(targetPath);
+
+    const normalizedWorkspace = process.platform === 'win32'
+        ? workspaceResolved.toLowerCase()
+        : workspaceResolved;
+    const normalizedTarget = process.platform === 'win32'
+        ? targetResolved.toLowerCase()
+        : targetResolved;
+
+    const workspacePrefix = normalizedWorkspace.endsWith(path.sep)
+        ? normalizedWorkspace
+        : normalizedWorkspace + path.sep;
+
+    return normalizedTarget === normalizedWorkspace || normalizedTarget.startsWith(workspacePrefix);
 }
 
 interface FileEntry {
@@ -90,51 +116,72 @@ interface FileEntry {
     updatedAt: Date;
     size: number;
     themeName: string;
+    children?: FileEntry[]; // 用于文件夹
+}
+
+// 读取单个 md 文件并提取 themeName
+function readFileEntry(fullPath: string, name: string): FileEntry {
+    const stats = fs.statSync(fullPath);
+    let themeName = '默认主题';
+    try {
+        const fd = fs.openSync(fullPath, 'r');
+        const buffer = Buffer.alloc(500);
+        const bytesRead = fs.readSync(fd, buffer, 0, 500, 0);
+        fs.closeSync(fd);
+        const content = buffer.toString('utf8', 0, bytesRead);
+        const match = content.match(/^---\n([\s\S]*?)\n---/);
+        if (match) {
+            const themeMatch = match[1].match(/themeName:\s*(.+)/);
+            if (themeMatch) {
+                themeName = themeMatch[1].trim().replace(/^['"]|['"]$/g, '');
+            }
+        }
+    } catch (e) { /* 忽略 */ }
+    return {
+        name,
+        path: fullPath,
+        isDirectory: false,
+        createdAt: stats.birthtime,
+        updatedAt: stats.mtime,
+        size: stats.size,
+        themeName,
+    };
 }
 
 function scanWorkspace(dir: string): FileEntry[] {
     if (!dir || !fs.existsSync(dir)) return [];
     try {
         const entries = fs.readdirSync(dir, { withFileTypes: true });
+        const results: FileEntry[] = [];
+
+        // 先处理文件夹
+        const folders = entries
+            .filter(e => e.isDirectory() && !e.name.startsWith('.'))
+            .sort((a, b) => a.name.localeCompare(b.name));
+        for (const folder of folders) {
+            const folderPath = path.join(dir, folder.name);
+            const stats = fs.statSync(folderPath);
+            const children = scanWorkspace(folderPath); // 递归
+            results.push({
+                name: folder.name,
+                path: folderPath,
+                isDirectory: true,
+                createdAt: stats.birthtime,
+                updatedAt: stats.mtime,
+                size: 0,
+                themeName: '',
+                children,
+            });
+        }
+
+        // 再处理 md 文件
         const mdFiles = entries
-            .filter(entry => entry.isFile() && entry.name.endsWith('.md') && !entry.name.startsWith('.'))
-            .map(entry => {
-                const fullPath = path.join(dir, entry.name);
-                const stats = fs.statSync(fullPath);
+            .filter(e => e.isFile() && e.name.endsWith('.md') && !e.name.startsWith('.'))
+            .map(e => readFileEntry(path.join(dir, e.name), e.name))
+            .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+        results.push(...mdFiles);
 
-                // 尝试读取 Frontmatter 获取 themeName
-                let themeName = '默认主题';
-                try {
-                    const fd = fs.openSync(fullPath, 'r');
-                    const buffer = Buffer.alloc(500); // 读取前 500 字节
-                    const bytesRead = fs.readSync(fd, buffer, 0, 500, 0);
-                    fs.closeSync(fd);
-
-                    const content = buffer.toString('utf8', 0, bytesRead);
-                    const match = content.match(/^---\n([\s\S]*?)\n---/);
-                    if (match) {
-                        const frontmatter = match[1];
-                        const themeMatch = frontmatter.match(/themeName:\s*(.+)/);
-                        if (themeMatch) {
-                            themeName = themeMatch[1].trim().replace(/^['"]|['"]$/g, '');
-                        }
-                    }
-                } catch (e) {
-                    // 忽略读取错误
-                }
-
-                return {
-                    name: entry.name,
-                    path: fullPath,
-                    isDirectory: false,
-                    createdAt: stats.birthtime,
-                    updatedAt: stats.mtime,
-                    size: stats.size,
-                    themeName
-                };
-            })
-            .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()); // 按更新时间降序
-        return mdFiles;
+        return results;
     } catch (error) {
         console.error('Scan workspace failed:', error);
         return [];
@@ -230,12 +277,18 @@ ipcMain.handle('workspace:set', async (_event: IpcMainInvokeEvent, dir: string) 
 ipcMain.handle('file:list', async (_event: IpcMainInvokeEvent, dir?: string) => {
     const targetDir = dir || workspaceDir;
     if (!targetDir) return { success: false, error: 'No workspace selected' };
+    if (!isPathInsideWorkspace(targetDir)) {
+        return { success: false, error: '非法路径' };
+    }
     const files = scanWorkspace(targetDir);
     return { success: true, files };
 });
 
 ipcMain.handle('file:read', async (_event: IpcMainInvokeEvent, filePath: string) => {
     try {
+        if (!isPathInsideWorkspace(filePath)) {
+            return { success: false, error: '非法路径' };
+        }
         if (!fs.existsSync(filePath)) {
             return { success: false, error: 'File not found' };
         }
@@ -249,12 +302,30 @@ ipcMain.handle('file:read', async (_event: IpcMainInvokeEvent, filePath: string)
 ipcMain.handle('file:create', async (_event: IpcMainInvokeEvent, payload: { filename?: string; content?: string }) => {
     if (!workspaceDir) return { success: false, error: 'No workspace' };
     const { filename, content } = payload || {};
-    const safeName = filename ? filename.trim() : '未命名文章.md';
+
+    let targetPath = '';
+    if (filename) {
+        if (path.isAbsolute(filename)) {
+            targetPath = filename;
+        } else {
+            targetPath = path.join(workspaceDir, filename);
+        }
+    } else {
+        targetPath = path.join(workspaceDir, '未命名文章.md');
+    }
+
+    if (!isPathInsideWorkspace(targetPath)) {
+        return { success: false, error: '非法路径' };
+    }
 
     // 自动处理重名
-    const targetPath = getUniqueFilePath(workspaceDir, safeName);
+    targetPath = getUniqueFilePath(targetPath);
 
     try {
+        const dir = path.dirname(targetPath);
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+        }
         fs.writeFileSync(targetPath, content || '', 'utf-8');
         return { success: true, filePath: targetPath, filename: path.basename(targetPath) };
     } catch (error: any) {
@@ -267,6 +338,9 @@ ipcMain.handle('file:save', async (_event: IpcMainInvokeEvent, payload: { filePa
     if (!filePath) return { success: false, error: 'File path required' };
 
     try {
+        if (!isPathInsideWorkspace(filePath)) {
+            return { success: false, error: '非法路径' };
+        }
         // 检查内容是否变更，避免不必要的写入
         let existingContent = '';
         if (fs.existsSync(filePath)) {
@@ -288,9 +362,15 @@ ipcMain.handle('file:rename', async (_event: IpcMainInvokeEvent, payload: { oldP
     const { oldPath, newName } = payload;
     if (!oldPath || !newName) return { success: false, error: 'Invalid arguments' };
 
+    if (!isPathInsideWorkspace(oldPath)) {
+        return { success: false, error: '非法路径' };
+    }
+
     const dir = path.dirname(oldPath);
     // 确保新名字以 .md 结尾
-    const safeName = newName.endsWith('.md') ? newName : `${newName}.md`;
+    const trimmedName = newName.trim();
+    const safeName = trimmedName.endsWith('.md') ? trimmedName : `${trimmedName}.md`;
+    const safeBaseName = path.basename(safeName);
     const newPath = path.join(dir, safeName);
 
     if (oldPath === newPath) return { success: true, filePath: newPath };
@@ -301,8 +381,15 @@ ipcMain.handle('file:rename', async (_event: IpcMainInvokeEvent, payload: { oldP
     }
 
     try {
-        fs.renameSync(oldPath, newPath);
-        return { success: true, filePath: newPath };
+        const finalPath = path.join(dir, safeBaseName);
+        if (!isPathInsideWorkspace(finalPath)) {
+            return { success: false, error: '非法路径' };
+        }
+        if (fs.existsSync(finalPath) && oldPath.toLowerCase() !== finalPath.toLowerCase()) {
+            return { success: false, error: '文件名已存在' };
+        }
+        fs.renameSync(oldPath, finalPath);
+        return { success: true, filePath: finalPath };
     } catch (error: any) {
         return { success: false, error: error.message };
     }
@@ -311,6 +398,9 @@ ipcMain.handle('file:rename', async (_event: IpcMainInvokeEvent, payload: { oldP
 ipcMain.handle('file:delete', async (_event: IpcMainInvokeEvent, filePath: string) => {
     if (!filePath) return { success: false, error: 'Path required' };
     try {
+        if (!isPathInsideWorkspace(filePath)) {
+            return { success: false, error: '非法路径' };
+        }
         if (fs.existsSync(filePath)) {
             // 尝试移动到回收站
             await shell.trashItem(filePath);
@@ -329,9 +419,234 @@ ipcMain.handle('file:delete', async (_event: IpcMainInvokeEvent, filePath: strin
 
 ipcMain.handle('file:reveal', async (_event: IpcMainInvokeEvent, filePath: string) => {
     if (filePath) {
+        if (!isPathInsideWorkspace(filePath)) return;
         shell.showItemInFolder(filePath);
     }
 });
+
+// --- 文件夹管理 ---
+ipcMain.handle('folder:create', async (_event: IpcMainInvokeEvent, folderPathArg: string) => {
+    if (!workspaceDir) return { success: false, error: 'No workspace' };
+    if (!folderPathArg || folderPathArg.trim() === '') {
+        return { success: false, error: '文件夹名称不能为空' };
+    }
+
+    let targetPath = folderPathArg.trim();
+    if (!path.isAbsolute(targetPath)) {
+        targetPath = path.join(workspaceDir, targetPath);
+    }
+
+    if (!isPathInsideWorkspace(targetPath)) {
+        return { success: false, error: '非法路径' };
+    }
+
+    if (fs.existsSync(targetPath)) {
+        return { success: false, error: '文件夹已存在' };
+    }
+
+    try {
+        fs.mkdirSync(targetPath, { recursive: true });
+        return { success: true, path: targetPath, name: path.basename(targetPath) };
+    } catch (error: any) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('folder:rename', async (_event: IpcMainInvokeEvent, payload: { folderPath: string; newName: string }) => {
+    const { folderPath, newName } = payload;
+    if (!folderPath || !newName) return { success: false, error: 'Invalid arguments' };
+    if (!isPathInsideWorkspace(folderPath)) return { success: false, error: '非法路径' };
+
+    if (!fs.existsSync(folderPath)) {
+        return { success: false, error: '文件夹不存在' };
+    }
+    const stats = fs.statSync(folderPath);
+    if (!stats.isDirectory()) {
+        return { success: false, error: '不是文件夹' };
+    }
+
+    const safeBaseName = path.basename(newName.trim());
+    if (!safeBaseName) {
+        return { success: false, error: '文件夹名称不能为空' };
+    }
+
+    const dir = path.dirname(folderPath);
+    const newPath = path.join(dir, safeBaseName);
+
+    if (!isPathInsideWorkspace(newPath)) {
+        return { success: false, error: '非法路径' };
+    }
+
+    if (folderPath === newPath) {
+        return { success: true, newPath };
+    }
+
+    if (fs.existsSync(newPath)) {
+        return { success: false, error: '文件夹已存在' };
+    }
+
+    try {
+        fs.renameSync(folderPath, newPath);
+        return { success: true, newPath };
+    } catch (error: any) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('folder:move-folder', async (_event: IpcMainInvokeEvent, payload: { folderPath: string; targetFolder: string }) => {
+    const { folderPath, targetFolder } = payload;
+    if (!folderPath) return { success: false, error: 'Path required' };
+
+    if (!isPathInsideWorkspace(folderPath)) {
+        return { success: false, error: '非法路径' };
+    }
+
+    if (!fs.existsSync(folderPath)) {
+        return { success: false, error: '文件夹不存在' };
+    }
+
+    const stats = fs.statSync(folderPath);
+    if (!stats.isDirectory()) {
+        return { success: false, error: '不是文件夹' };
+    }
+
+    const targetDir = targetFolder ? targetFolder : workspaceDir;
+    if (!targetDir) return { success: false, error: 'No workspace' };
+
+    if (!isPathInsideWorkspace(targetDir)) {
+        return { success: false, error: '非法路径' };
+    }
+
+    if (!fs.existsSync(targetDir) || !fs.statSync(targetDir).isDirectory()) {
+        return { success: false, error: '目标文件夹不存在' };
+    }
+
+    const folderName = path.basename(folderPath);
+    const newPath = path.join(targetDir, folderName);
+
+    if (folderPath === newPath) return { success: true, newPath };
+
+    const resolvedOld = path.resolve(folderPath);
+    const resolvedNew = path.resolve(newPath);
+    if (resolvedNew.startsWith(resolvedOld + path.sep)) {
+        return { success: false, error: '不能移动到子文件夹' };
+    }
+
+    if (fs.existsSync(newPath)) {
+        return { success: false, error: '目标位置已存在同名文件夹' };
+    }
+
+    try {
+        fs.renameSync(folderPath, newPath);
+        return { success: true, newPath };
+    } catch (error: any) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('folder:move', async (_event: IpcMainInvokeEvent, payload: { filePath: string; targetFolder: string }) => {
+    const { filePath, targetFolder } = payload;
+    if (!filePath) return { success: false, error: 'File path required' };
+
+    // targetFolder 为空字符串表示移动到根目录
+    const targetDir = targetFolder ? targetFolder : workspaceDir;
+    if (!targetDir) return { success: false, error: 'No workspace' };
+
+    if (!isPathInsideWorkspace(filePath) || !isPathInsideWorkspace(targetDir)) {
+        return { success: false, error: '非法路径' };
+    }
+
+    const fileName = path.basename(filePath);
+    const newPath = path.join(targetDir, fileName);
+
+    if (filePath === newPath) return { success: true, newPath };
+
+    if (fs.existsSync(newPath)) {
+        return { success: false, error: '目标位置已存在同名文件' };
+    }
+
+    try {
+        fs.renameSync(filePath, newPath);
+        return { success: true, newPath };
+    } catch (error: any) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('folder:inspect', async (_event: IpcMainInvokeEvent, folderPath: string) => {
+    if (!folderPath) return { success: false, error: 'Path required' };
+    try {
+        if (!isPathInsideWorkspace(folderPath)) {
+            return { success: false, error: '非法路径' };
+        }
+        if (!fs.existsSync(folderPath)) {
+            return { success: false, error: '文件夹不存在' };
+        }
+        const stats = fs.statSync(folderPath);
+        if (!stats.isDirectory()) {
+            return { success: false, error: '不是文件夹' };
+        }
+
+        const entries = fs.readdirSync(folderPath, { withFileTypes: true });
+        const extraEntries = entries
+            .filter((entry) => {
+                if (entry.name.startsWith('.')) return true;
+                return entry.isFile() && !entry.name.endsWith('.md');
+            })
+            .map((entry) => entry.name);
+
+        return { success: true, entries: extraEntries };
+    } catch (error: any) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle(
+    'folder:delete',
+    async (
+        _event: IpcMainInvokeEvent,
+        payload: string | { folderPath: string; recursive?: boolean }
+    ) => {
+        const folderPath = typeof payload === 'string' ? payload : payload?.folderPath;
+        const recursive = typeof payload === 'string' ? false : payload?.recursive === true;
+        if (!folderPath) return { success: false, error: 'Path required' };
+
+        try {
+            if (!isPathInsideWorkspace(folderPath)) {
+                return { success: false, error: '非法路径' };
+            }
+            if (!fs.existsSync(folderPath)) {
+                return { success: true }; // 已经不存在
+            }
+
+            const stats = fs.statSync(folderPath);
+            if (!stats.isDirectory()) {
+                return { success: false, error: '不是文件夹' };
+            }
+
+            if (recursive) {
+                try {
+                    await shell.trashItem(folderPath);
+                    return { success: true };
+                } catch {
+                    fs.rmSync(folderPath, { recursive: true, force: true });
+                    return { success: true };
+                }
+            }
+
+            // 检查是否为空文件夹
+            const contents = fs.readdirSync(folderPath);
+            if (contents.length > 0) {
+                return { success: false, error: '文件夹不为空，请先移出或删除其中的文件' };
+            }
+
+            fs.rmdirSync(folderPath);
+            return { success: true };
+        } catch (error: any) {
+            return { success: false, error: error.message };
+        }
+    }
+);
 
 // 更新相关
 ipcMain.handle('update:openReleases', () => {

@@ -5,11 +5,23 @@ export interface FileItem {
   updatedAt: Date;
   size: number;
   themeName?: string;
+  isDirectory?: false; // 标识为文件
 }
+
+export interface FolderItem {
+  name: string;
+  path: string;
+  createdAt: Date;
+  updatedAt: Date;
+  isDirectory: true; // 标识为文件夹
+  children: TreeItem[];
+}
+
+export type TreeItem = FileItem | FolderItem;
 
 export interface FileStoreState {
   workspacePath: string | null;
-  files: FileItem[];
+  files: TreeItem[]; // 支持树形结构
   currentFile: FileItem | null;
   isLoading: boolean;
   isSaving: boolean;
@@ -22,7 +34,7 @@ export interface FileStoreState {
 
   // 操作方法
   setWorkspacePath: (path: string | null) => void;
-  setFiles: (files: FileItem[]) => void;
+  setFiles: (files: TreeItem[]) => void;
   setCurrentFile: (file: FileItem | null) => void;
   setLoading: (loading: boolean) => void;
   setSaving: (saving: boolean) => void;

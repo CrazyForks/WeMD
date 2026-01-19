@@ -15,6 +15,15 @@ contextBridge.exposeInMainWorld('electron', {
         deleteFile: (filePath: string) => ipcRenderer.invoke('file:delete', filePath),
         revealInFinder: (filePath: string) => ipcRenderer.invoke('file:reveal', filePath),
 
+        // 文件夹管理
+        createFolder: (folderName: string) => ipcRenderer.invoke('folder:create', folderName),
+        moveFile: (payload: { filePath: string; targetFolder: string }) => ipcRenderer.invoke('folder:move', payload),
+        inspectFolder: (folderPath: string) => ipcRenderer.invoke('folder:inspect', folderPath),
+        deleteFolder: (payload: string | { folderPath: string; recursive?: boolean }) =>
+            ipcRenderer.invoke('folder:delete', payload),
+        renameFolder: (payload: { folderPath: string; newName: string }) => ipcRenderer.invoke('folder:rename', payload),
+        moveFolder: (payload: { folderPath: string; targetFolder: string }) => ipcRenderer.invoke('folder:move-folder', payload),
+
         onRefresh: (callback: () => void) => {
             const handler = (_event: IpcRendererEvent) => callback();
             ipcRenderer.on('file:refresh', handler);

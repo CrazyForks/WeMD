@@ -3,7 +3,7 @@ import { useFileStore } from "../store/fileStore";
 import { useEditorStore } from "../store/editorStore";
 import { useThemeStore } from "../store/themeStore";
 import { useStorageContext } from "../storage/StorageContext";
-import type { FileItem } from "../store/fileTypes";
+import type { FileItem, TreeItem } from "../store/fileTypes";
 import toast from "react-hot-toast";
 
 // 本地定义 Electron API 类型以确保类型安全
@@ -14,6 +14,8 @@ interface ElectronFileItem {
   updatedAt: string;
   size?: number;
   themeName?: string;
+  isDirectory?: boolean;
+  children?: ElectronFileItem[];
 }
 
 interface ElectronAPI {
@@ -44,6 +46,33 @@ interface ElectronAPI {
     }) => Promise<{ success: boolean; filePath?: string; error?: string }>;
     deleteFile: (path: string) => Promise<{ success: boolean; error?: string }>;
     revealInFinder: (path: string) => Promise<void>;
+    // 文件夹管理
+    createFolder: (
+      folderName: string,
+    ) => Promise<{
+      success: boolean;
+      path?: string;
+      name?: string;
+      error?: string;
+    }>;
+    moveFile: (payload: {
+      filePath: string;
+      targetFolder: string;
+    }) => Promise<{ success: boolean; newPath?: string; error?: string }>;
+    inspectFolder: (
+      folderPath: string,
+    ) => Promise<{ success: boolean; entries?: string[]; error?: string }>;
+    deleteFolder: (
+      payload: string | { folderPath: string; recursive?: boolean },
+    ) => Promise<{ success: boolean; error?: string }>;
+    renameFolder: (payload: {
+      folderPath: string;
+      newName: string;
+    }) => Promise<{ success: boolean; newPath?: string; error?: string }>;
+    moveFolder: (payload: {
+      folderPath: string;
+      targetFolder: string;
+    }) => Promise<{ success: boolean; newPath?: string; error?: string }>;
     onRefresh: (cb: () => void) => () => void;
     removeRefreshListener: (handler: () => void) => void;
     onMenuNewFile: (cb: () => void) => () => void;
@@ -53,9 +82,134 @@ interface ElectronAPI {
   };
 }
 
+// 将 Electron 返回的树形数据转换为 TreeItem[]
+function convertToTreeItems(items: ElectronFileItem[]): TreeItem[] {
+  return items.map((f) => {
+    if (f.isDirectory && f.children) {
+      return {
+        name: f.name,
+        path: f.path,
+        createdAt: new Date(f.createdAt),
+        updatedAt: new Date(f.updatedAt),
+        isDirectory: true as const,
+        children: convertToTreeItems(f.children),
+      };
+    }
+    return {
+      name: f.name,
+      path: f.path,
+      createdAt: new Date(f.createdAt),
+      updatedAt: new Date(f.updatedAt),
+      size: f.size ?? 0,
+      themeName: f.themeName,
+      isDirectory: false as const,
+    };
+  });
+}
+
+// storage adapter 返回的 FileItem 类型
+interface AdapterFileItem {
+  name: string;
+  path: string;
+  size?: number;
+  updatedAt?: string;
+  meta?: Record<string, unknown>;
+}
+
+// 将 adapter 返回的数据转换为 TreeItem[]
+function convertAdapterFilesToTreeItems(items: AdapterFileItem[]): TreeItem[] {
+  return items.map((f) => {
+    if (f.meta?.isDirectory && Array.isArray(f.meta?.children)) {
+      return {
+        name: f.name,
+        path: f.path,
+        createdAt: f.updatedAt ? new Date(f.updatedAt) : new Date(),
+        updatedAt: f.updatedAt ? new Date(f.updatedAt) : new Date(),
+        isDirectory: true as const,
+        children: convertAdapterFilesToTreeItems(
+          f.meta.children as AdapterFileItem[],
+        ),
+      };
+    }
+    return {
+      name: f.name,
+      path: f.path,
+      createdAt: f.updatedAt ? new Date(f.updatedAt) : new Date(),
+      updatedAt: f.updatedAt ? new Date(f.updatedAt) : new Date(),
+      size: f.size ?? 0,
+      themeName: (f.meta?.themeName as string) || undefined,
+      isDirectory: false as const,
+    };
+  });
+}
+
 const getElectron = (): ElectronAPI | null => {
-  return window.electron as ElectronAPI;
+  return window.electron as unknown as ElectronAPI | null;
 };
+
+// 从树形结构中提取所有文件（不包括文件夹）
+function flattenFiles(items: TreeItem[]): FileItem[] {
+  const result: FileItem[] = [];
+  for (const item of items) {
+    if (item.isDirectory) {
+      result.push(...flattenFiles(item.children));
+    } else {
+      result.push(item as FileItem);
+    }
+  }
+  return result;
+}
+
+function splitPath(filePath: string): { dir: string; sep: string } {
+  const lastSlash = Math.max(
+    filePath.lastIndexOf("/"),
+    filePath.lastIndexOf("\\"),
+  );
+  if (lastSlash === -1) {
+    return { dir: "", sep: "/" };
+  }
+  return { dir: filePath.slice(0, lastSlash), sep: filePath[lastSlash] };
+}
+
+function joinPath(base: string | undefined, name: string): string {
+  if (!base) return name;
+  const sep = base.includes("\\") ? "\\" : "/";
+  const trimmed = base.replace(/[\\/]+$/, "");
+  return `${trimmed}${sep}${name}`;
+}
+
+function normalizePath(input: string): string {
+  return input.replace(/\\/g, "/");
+}
+
+function replacePathPrefix(
+  filePath: string,
+  oldPrefix: string,
+  newPrefix: string,
+): string | null {
+  const normalizedPath = normalizePath(filePath);
+  const normalizedOld = normalizePath(oldPrefix);
+  const normalizedNew = normalizePath(newPrefix);
+
+  if (normalizedPath === normalizedOld) {
+    const output = normalizedNew;
+    return newPrefix.includes("\\") ? output.replace(/\//g, "\\") : output;
+  }
+
+  if (!normalizedPath.startsWith(`${normalizedOld}/`)) return null;
+  const suffix = normalizedPath.slice(normalizedOld.length);
+  const output = normalizedNew + suffix;
+  return newPrefix.includes("\\") ? output.replace(/\//g, "\\") : output;
+}
+
+function isPathWithinFolder(filePath: string, folderPath: string): boolean {
+  const normalizedFile = normalizePath(filePath);
+  const normalizedFolder = normalizePath(folderPath);
+  return (
+    normalizedFile === normalizedFolder ||
+    normalizedFile.startsWith(`${normalizedFolder}/`)
+  );
+}
 
 const WORKSPACE_KEY = "wemd-workspace-path";
 const LAST_FILE_KEY = "wemd-last-file-path";
@@ -136,28 +290,15 @@ export function useFileSystem() {
 
         const res = await electron.fs.listFiles(target);
         if (res.success && res.files) {
-          const mapped = res.files.map((f) => ({
-            ...f,
-            size: f.size ?? 0,
-            createdAt: new Date(f.createdAt),
-            updatedAt: new Date(f.updatedAt),
-          }));
+          const mapped = convertToTreeItems(res.files);
           setFiles(mapped);
         }
       } else if (adapter && storageReady) {
         try {
-          const files = await adapter.listFiles();
-          // 适配器返回 FileItem[]，与 store 兼容
-          setFiles(
-            files.map((f) => ({
-              name: f.name,
-              path: f.path,
-              size: f.size ?? 0,
-              createdAt: f.updatedAt ? new Date(f.updatedAt) : new Date(),
-              updatedAt: f.updatedAt ? new Date(f.updatedAt) : new Date(),
-              themeName: (f.meta?.themeName as string) || undefined,
-            })),
-          );
+          const rawFiles = await adapter.listFiles();
+          // 转换 adapter 返回的数据为 TreeItem[]
+          const mapped = convertAdapterFilesToTreeItems(rawFiles);
+          setFiles(mapped);
         } catch (error) {
           console.error("加载文件列表失败:", error);
           toast.error("无法加载文件列表");
@@ -303,52 +444,62 @@ export function useFileSystem() {
   );
 
   // 5. 创建文件
-  const createFile = useCallback(async () => {
-    // 防止快速重复点击创建多个文件
-    if (isCreating.current) return;
-    isCreating.current = true;
+  const createFile = useCallback(
+    async (folderPath?: string) => {
+      // 防止快速重复点击创建多个文件
+      if (isCreating.current) return;
+      isCreating.current = true;
 
-    const initialContent =
-      "---\ntheme: default\nthemeName: 默认主题\n---\n\n# 新文章\n\n";
+      const initialContent =
+        "---\ntheme: default\nthemeName: 默认主题\n---\n\n# 新文章\n\n";
 
-    try {
-      if (electron) {
-        if (!workspacePath) return;
-        const res = await electron.fs.createFile({ content: initialContent });
-        if (res.success && res.filePath) {
+      try {
+        if (electron) {
+          if (!workspacePath) return;
+          // 如果指定了文件夹，构建完整路径
+          const filename = `未命名文章-${Date.now()}.md`;
+          const targetPath = joinPath(folderPath, filename);
+          const res = await electron.fs.createFile({
+            filename: targetPath,
+            content: initialContent,
+          });
+          if (res.success && res.filePath) {
+            await refreshFiles();
+            const newFile = {
+              name: res.filename!,
+              path: res.filePath!,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+              size: 0,
+              themeName: "默认主题",
+            };
+            await openFile(newFile);
+            toast.success("已创建新文章");
+          }
+        } else if (adapter && storageReady) {
+          const filename = `未命名文章-${Date.now()}.md`;
+          const targetPath = joinPath(folderPath, filename);
+          await adapter.writeFile(targetPath, initialContent);
           await refreshFiles();
           const newFile = {
-            name: res.filename!,
-            path: res.filePath!,
+            name: filename,
+            path: targetPath,
             createdAt: new Date(),
             updatedAt: new Date(),
-            size: 0,
+            size: initialContent.length,
             themeName: "默认主题",
           };
           await openFile(newFile);
           toast.success("已创建新文章");
         }
-      } else if (adapter && storageReady) {
-        const filename = `未命名文章-${Date.now()}.md`;
-        await adapter.writeFile(filename, initialContent);
-        await refreshFiles();
-        const newFile = {
-          name: filename,
-          path: filename,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          size: initialContent.length,
-          themeName: "默认主题",
-        };
-        await openFile(newFile);
-        toast.success("已创建新文章");
+      } catch {
+        toast.error("创建失败");
+      } finally {
+        isCreating.current = false;
       }
-    } catch {
-      toast.error("创建失败");
-    } finally {
-      isCreating.current = false;
-    }
-  }, [workspacePath, refreshFiles, openFile, electron, adapter, storageReady]);
+    },
+    [workspacePath, refreshFiles, openFile, electron, adapter, storageReady],
+  );
 
   // 6. 保存文件
   const saveFile = useCallback(
@@ -434,11 +585,13 @@ themeName: ${themeName}
         }
       } else if (adapter && storageReady) {
         try {
-          await adapter.renameFile(file.path, safeName);
+          const { dir, sep } = splitPath(file.path);
+          const newPath = dir ? `${dir}${sep}${safeName}` : safeName;
+          await adapter.renameFile(file.path, newPath);
           toast.success("重命名成功");
           await refreshFiles();
           if (currentFile && currentFile.path === file.path) {
-            setCurrentFile({ ...currentFile, path: safeName, name: safeName });
+            setCurrentFile({ ...currentFile, path: newPath, name: safeName });
           }
         } catch {
           toast.error("重命名失败");
@@ -511,11 +664,11 @@ themeName: ${themeName}
             // 自动打开上次打开的文件或第一个文件
             const lastPath = localStorage.getItem(LAST_FILE_KEY);
             const { files: currentFiles } = useFileStore.getState();
-            if (currentFiles.length > 0) {
+            const flatFiles = flattenFiles(currentFiles);
+            if (flatFiles.length > 0) {
               const targetFile = lastPath
-                ? currentFiles.find((f) => f.path === lastPath) ||
-                  currentFiles[0]
-                : currentFiles[0];
+                ? flatFiles.find((f) => f.path === lastPath) || flatFiles[0]
+                : flatFiles[0];
               if (targetFile) {
                 await openFile(targetFile);
               }
@@ -524,10 +677,15 @@ themeName: ${themeName}
             setLoading(false);
           }
         })();
-        // 设置虚拟工作区路径用于 UI 显示
-        setWorkspacePath(
-          storageType === "filesystem" ? "本地文件夹" : "浏览器存储",
-        );
+        // 设置工作区路径用于 UI 显示
+        const folderName =
+          storageType === "filesystem" &&
+          (adapter as unknown as { directoryName?: string }).directoryName
+            ? (adapter as unknown as { directoryName: string }).directoryName
+            : storageType === "filesystem"
+              ? "本地文件夹"
+              : "浏览器存储";
+        setWorkspacePath(folderName);
       } else if (storageReady && storageType === "indexeddb") {
         // IndexedDB 模式：设置工作区标识
         setWorkspacePath("浏览器存储");
@@ -607,6 +765,249 @@ themeName: ${themeName}
   // 移除了此处重复的 Cmd+S 监听器
   // 应由 App.tsx 或其他顶层组件统一处理
 
+  const updateCurrentFilePathForFolder = useCallback(
+    (oldPath: string, newPath: string) => {
+      const activeFile = useFileStore.getState().currentFile;
+      if (!activeFile) return;
+      const updatedPath = replacePathPrefix(activeFile.path, oldPath, newPath);
+      if (updatedPath && updatedPath !== activeFile.path) {
+        setCurrentFile({ ...activeFile, path: updatedPath });
+        localStorage.setItem(LAST_FILE_KEY, updatedPath);
+      }
+    },
+    [setCurrentFile],
+  );
+
+  // 10. 创建文件夹
+  const createFolder = useCallback(
+    async (folderName: string, parentFolder?: string) => {
+      // 构建完整路径
+      const fullPath = joinPath(parentFolder, folderName);
+
+      if (electron) {
+        const res = await electron.fs.createFolder(fullPath);
+        if (res.success) {
+          toast.success("文件夹已创建");
+          await refreshFiles();
+          return res.path;
+        } else {
+          toast.error(res.error || "创建失败");
+          return null;
+        }
+      } else if (adapter?.createFolder) {
+        const res = await adapter.createFolder(fullPath);
+        if (res.success) {
+          toast.success("文件夹已创建");
+          await refreshFiles();
+          return res.path;
+        } else {
+          toast.error(res.error || "创建失败");
+          return null;
+        }
+      } else {
+        toast.error("当前存储模式不支持文件夹操作");
+        return null;
+      }
+    },
+    [electron, adapter, refreshFiles],
+  );
+
+  // 11. 移动文件到文件夹
+  const moveToFolder = useCallback(
+    async (file: FileItem, targetFolder: string) => {
+      if (electron) {
+        const res = await electron.fs.moveFile({
+          filePath: file.path,
+          targetFolder,
+        });
+        if (res.success) {
+          toast.success("文件已移动");
+          await refreshFiles();
+          if (currentFile && currentFile.path === file.path && res.newPath) {
+            setCurrentFile({ ...currentFile, path: res.newPath });
+            localStorage.setItem(LAST_FILE_KEY, res.newPath);
+          }
+          return true;
+        } else {
+          toast.error(res.error || "移动失败");
+          return false;
+        }
+      } else if (adapter?.moveFile) {
+        const res = await adapter.moveFile(file.path, targetFolder);
+        if (res.success) {
+          toast.success("文件已移动");
+          await refreshFiles();
+          if (currentFile && currentFile.path === file.path && res.newPath) {
+            setCurrentFile({ ...currentFile, path: res.newPath });
+            localStorage.setItem(LAST_FILE_KEY, res.newPath);
+          }
+          return true;
+        } else {
+          toast.error(res.error || "移动失败");
+          return false;
+        }
+      } else {
+        toast.error("当前存储模式不支持文件夹操作");
+        return false;
+      }
+    },
+    [electron, adapter, refreshFiles, currentFile, setCurrentFile],
+  );
+
+  // 12. 重命名文件夹
+  const renameFolder = useCallback(
+    async (folder: { path: string }, newName: string) => {
+      const safeName = newName.trim();
+      const safeBaseName = safeName.split(/[/\\]/).pop() || "";
+      if (!safeBaseName) {
+        toast.error("文件夹名称不能为空");
+        return { success: false as const };
+      }
+
+      const { dir, sep } = splitPath(folder.path);
+      const targetPath = dir ? `${dir}${sep}${safeBaseName}` : safeBaseName;
+
+      if (electron) {
+        const res = await electron.fs.renameFolder({
+          folderPath: folder.path,
+          newName: safeBaseName,
+        });
+        if (res.success && res.newPath) {
+          toast.success("文件夹已重命名");
+          await refreshFiles();
+          updateCurrentFilePathForFolder(folder.path, res.newPath);
+          return { success: true as const, newPath: res.newPath };
+        }
+        toast.error(res.error || "重命名失败");
+        return { success: false as const };
+      }
+
+      if (adapter?.renameFolder) {
+        const res = await adapter.renameFolder(folder.path, targetPath);
+        if (res.success && res.newPath) {
+          toast.success("文件夹已重命名");
+          await refreshFiles();
+          updateCurrentFilePathForFolder(folder.path, res.newPath);
+          return { success: true as const, newPath: res.newPath };
+        }
+        toast.error(res.error || "重命名失败");
+        return { success: false as const };
+      }
+
+      toast.error("当前存储模式不支持文件夹操作");
+      return { success: false as const };
+    },
+    [electron, adapter, refreshFiles, updateCurrentFilePathForFolder],
+  );
+
+  // 13. 移动文件夹
+  const moveFolder = useCallback(
+    async (folder: { path: string }, targetFolder: string) => {
+      if (electron) {
+        const res = await electron.fs.moveFolder({
+          folderPath: folder.path,
+          targetFolder,
+        });
+        if (res.success && res.newPath) {
+          toast.success("文件夹已移动");
+          await refreshFiles();
+          updateCurrentFilePathForFolder(folder.path, res.newPath);
+          return { success: true as const, newPath: res.newPath };
+        }
+        toast.error(res.error || "移动失败");
+        return { success: false as const };
+      }
+
+      if (adapter?.moveFolder) {
+        const res = await adapter.moveFolder(folder.path, targetFolder);
+        if (res.success && res.newPath) {
+          toast.success("文件夹已移动");
+          await refreshFiles();
+          updateCurrentFilePathForFolder(folder.path, res.newPath);
+          return { success: true as const, newPath: res.newPath };
+        }
+        toast.error(res.error || "移动失败");
+        return { success: false as const };
+      }
+
+      toast.error("当前存储模式不支持文件夹操作");
+      return { success: false as const };
+    },
+    [electron, adapter, refreshFiles, updateCurrentFilePathForFolder],
+  );
+
+  // 14. 删除文件夹
+  const deleteFolderFn = useCallback(
+    async (folderPath: string, options?: { recursive?: boolean }) => {
+      if (electron) {
+        const res = await electron.fs.deleteFolder({
+          folderPath,
+          recursive: options?.recursive,
+        });
+        if (res.success) {
+          toast.success("文件夹已删除");
+          await refreshFiles();
+          if (currentFile && isPathWithinFolder(currentFile.path, folderPath)) {
+            setCurrentFile(null);
+            setMarkdown("");
+            setIsDirty(false);
+            setLastSavedContent("");
+          }
+          return true;
+        } else {
+          toast.error(res.error || "删除失败");
+          return false;
+        }
+      } else if (adapter?.deleteFolder) {
+        const res = await adapter.deleteFolder(folderPath, options);
+        if (res.success) {
+          toast.success("文件夹已删除");
+          await refreshFiles();
+          if (currentFile && isPathWithinFolder(currentFile.path, folderPath)) {
+            setCurrentFile(null);
+            setMarkdown("");
+            setIsDirty(false);
+            setLastSavedContent("");
+          }
+          return true;
+        } else {
+          toast.error(res.error || "删除失败");
+          return false;
+        }
+      } else {
+        toast.error("当前存储模式不支持文件夹操作");
+        return false;
+      }
+    },
+    [
+      electron,
+      adapter,
+      refreshFiles,
+      currentFile,
+      setMarkdown,
+      setCurrentFile,
+      setIsDirty,
+      setLastSavedContent,
+    ],
+  );
+
+  const inspectFolder = useCallback(
+    async (folderPath: string) => {
+      if (electron) {
+        const res = await electron.fs.inspectFolder(folderPath);
+        if (res.success && res.entries) return res.entries;
+        return [];
+      }
+      if (adapter?.inspectFolder) {
+        const res = await adapter.inspectFolder(folderPath);
+        if (res.success && res.entries) return res.entries;
+        return [];
+      }
+      return [];
+    },
+    [electron, adapter],
+  );
+
   return {
     workspacePath,
     files,
@@ -619,5 +1020,13 @@ themeName: ${themeName}
     saveFile,
     renameFile,
     deleteFile,
+    // 文件夹操作
+    createFolder,
+    moveToFolder,
+    renameFolder,
+    moveFolder,
+    deleteFolder: deleteFolderFn,
+    inspectFolder,
+    flattenFiles,
   };
 }

@@ -1,141 +1,162 @@
-import { useState, useMemo, useRef, useEffect, useCallback } from "react";
-import { useFileSystem } from "../../hooks/useFileSystem";
 import { useThemeStore } from "../../store/themeStore";
 import {
   Search,
   Plus,
-  Trash2,
   FolderOpen,
-  Edit2,
+  FolderPlus,
   MoreHorizontal,
-  Copy,
-  Github,
-  Globe,
-  BookOpen,
+  ChevronRight,
 } from "lucide-react";
-import { createPortal } from "react-dom";
-import toast from "react-hot-toast";
-import { useUITheme } from "../../hooks/useUITheme";
 import { SidebarFooter } from "./SidebarFooter";
+import {
+  DeleteFileModal,
+  DeleteFolderModal,
+  RenameFolderModal,
+  NewFolderModal,
+  Tooltip,
+} from "./SidebarModals";
+import { ContextMenu } from "./ContextMenu";
+import {
+  useSidebarState,
+  getBaseName,
+  ROOT_DROP_TARGET,
+  FILE_DRAG_TYPE,
+  FOLDER_DRAG_TYPE,
+} from "./useSidebarState";
 import "./FileSidebar.css";
 
-import type { FileItem } from "../../store/fileTypes";
-
-// 每次加载的文件数量
-const PAGE_SIZE = 50;
+import type { FileItem, FolderItem, TreeItem } from "../../store/fileTypes";
 
 export function FileSidebar() {
-  const {
-    files,
-    currentFile,
-    openFile,
-    createFile,
-    renameFile,
-    deleteFile,
-    selectWorkspace,
-    workspacePath,
-  } = useFileSystem();
-  const currentThemeName = useThemeStore((state) => state.themeName);
-  const [filter, setFilter] = useState("");
-  const [renamingPath, setRenamingPath] = useState<string | null>(null);
-  const [renameValue, setRenameValue] = useState("");
+  const state = useSidebarState();
+  const currentThemeName = useThemeStore((s) => s.themeName);
 
-  // 无限滚动状态
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-  const loadMoreRef = useRef<HTMLDivElement>(null);
+  const renderFileItem = (file: FileItem) => (
+    <div
+      key={file.path}
+      className={`fs-item ${state.currentFile?.path === file.path ? "active" : ""} ${state.draggingPath === file.path ? "dragging" : ""}`}
+      onClick={() => state.handleFileClick(file)}
+      onContextMenu={(e) => state.handleContextMenu(e, file)}
+      draggable={state.isDragEnabled && state.renamingPath !== file.path}
+      onDragStart={(e) => {
+        if (!state.isDragEnabled) return;
+        e.dataTransfer.setData(FILE_DRAG_TYPE, file.path);
+        e.dataTransfer.setData("text/plain", file.path);
+        e.dataTransfer.effectAllowed = "move";
+        state.setDraggingPath(file.path);
+      }}
+      onDragEnd={() => {
+        state.setDraggingPath(null);
+        state.setDraggingFolderPath(null);
+        state.setDragOverTarget(null);
+      }}
+    >
+      <div className="fs-item-main">
+        <div className="fs-title-block">
+          {state.renamingPath === file.path ? (
+            <div className="fs-rename" onClick={(e) => e.stopPropagation()}>
+              <input
+                value={state.renameValue}
+                onChange={(e) => state.setRenameValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") state.submitRename();
+                  if (e.key === "Escape") state.setRenamingPath(null);
+                }}
+                autoFocus
+              />
+              <button onClick={() => state.submitRename()}>确认</button>
+              <button onClick={() => state.setRenamingPath(null)}>取消</button>
+            </div>
+          ) : (
+            <>
+              <span className="fs-title" title={file.name}>
+                {file.name.replace(/\.md$/, "")}
+              </span>
+              <div className="fs-meta-row">
+                <span className="fs-time">
+                  {state.formatTime(new Date(file.updatedAt))}
+                </span>
+                <span className="fs-meta-separator">·</span>
+                <span className="fs-theme-info">
+                  {state.currentFile?.path === file.path
+                    ? currentThemeName
+                    : file.themeName || "默认主题"}
+                </span>
+              </div>
+            </>
+          )}
+        </div>
+        <button
+          className="fs-action-trigger"
+          onClick={(e) => {
+            e.stopPropagation();
+            state.handleContextMenu(e, file);
+          }}
+        >
+          <MoreHorizontal size={16} />
+        </button>
+      </div>
+    </div>
+  );
 
-  // 右键菜单状态
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [menuPos, setMenuPos] = useState({ x: 0, y: 0 });
-  const [menuTarget, setMenuTarget] = useState<FileItem | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<FileItem | null>(null);
-  const [deleting, setDeleting] = useState(false);
-
-  const filteredFiles = useMemo(() => {
-    if (!filter) return files;
-    return files.filter((f) =>
-      f.name.toLowerCase().includes(filter.toLowerCase()),
+  const renderFolderItem = (folder: FolderItem) => {
+    const isCollapsed = state.collapsedFolders.has(folder.path);
+    const isActive = state.activeFolder === folder.path;
+    return (
+      <div key={folder.path} className="fs-folder-wrapper">
+        <div
+          className={`fs-folder ${isCollapsed ? "collapsed" : ""} ${isActive ? "active" : ""} ${state.dragOverTarget === folder.path ? "drop-target" : ""} ${state.draggingFolderPath === folder.path ? "dragging" : ""}`}
+          onClick={() => state.toggleFolder(folder.path)}
+          onContextMenu={(e) => state.handleFolderContextMenu(e, folder)}
+          draggable={state.isDragEnabled}
+          onDragStart={(e) => {
+            if (!state.isDragEnabled) return;
+            e.dataTransfer.setData(FOLDER_DRAG_TYPE, folder.path);
+            e.dataTransfer.effectAllowed = "move";
+            state.setDraggingFolderPath(folder.path);
+          }}
+          onDragEnd={() => {
+            state.setDraggingFolderPath(null);
+            state.setDraggingPath(null);
+            state.setDragOverTarget(null);
+          }}
+          onDragOver={(e) => {
+            if (!state.isDragEnabled) return;
+            e.preventDefault();
+            e.stopPropagation();
+            e.dataTransfer.dropEffect = "move";
+            state.setDragOverTarget(folder.path);
+          }}
+          onDrop={(e) => state.handleDropToFolder(e, folder.path)}
+          onDragLeave={(e) => state.handleDragLeave(e, folder.path)}
+        >
+          <ChevronRight
+            size={14}
+            className={`fs-folder-icon ${isCollapsed ? "" : "expanded"}`}
+          />
+          <FolderOpen size={14} className="fs-folder-type-icon" />
+          <span className="fs-folder-name">{folder.name}</span>
+          <span className="fs-folder-count">{folder.children.length}</span>
+        </div>
+        {!isCollapsed && (
+          <div className="fs-folder-children">
+            {folder.children.map((child) =>
+              child.isDirectory
+                ? renderFolderItem(child as FolderItem)
+                : renderFileItem(child as FileItem),
+            )}
+          </div>
+        )}
+      </div>
     );
-  }, [files, filter]);
+  };
 
-  // 当前可见的文件列表
-  const visibleFiles = useMemo(() => {
-    return filteredFiles.slice(0, visibleCount);
-  }, [filteredFiles, visibleCount]);
-
-  // 是否还有更多文件可加载
-  const hasMore = visibleCount < filteredFiles.length;
-
-  // 加载更多文件
-  const loadMore = useCallback(() => {
-    if (hasMore) {
-      setVisibleCount((prev) =>
-        Math.min(prev + PAGE_SIZE, filteredFiles.length),
-      );
-    }
-  }, [hasMore, filteredFiles.length]);
-
-  // 使用 Intersection Observer 检测滚动到底部
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMore) {
-          loadMore();
-        }
-      },
-      { threshold: 0.1 },
+  const renderTreeItems = (items: TreeItem[]) => {
+    return items.map((item) =>
+      item.isDirectory
+        ? renderFolderItem(item as FolderItem)
+        : renderFileItem(item as FileItem),
     );
-
-    if (loadMoreRef.current) {
-      observer.observe(loadMoreRef.current);
-    }
-
-    return () => observer.disconnect();
-  }, [hasMore, loadMore]);
-
-  // 搜索条件变化时重置可见数量
-  useEffect(() => {
-    setVisibleCount(PAGE_SIZE);
-  }, [filter]);
-
-  const handleContextMenu = (e: React.MouseEvent, file: FileItem) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setMenuTarget(file);
-    setMenuPos({ x: e.clientX, y: e.clientY });
-    setMenuOpen(true);
-  };
-
-  const closeMenu = () => {
-    setMenuOpen(false);
-    setMenuTarget(null);
-  };
-
-  const startRename = (file: FileItem) => {
-    setRenamingPath(file.path);
-    setRenameValue(file.name.replace(".md", ""));
-    closeMenu();
-  };
-
-  const copyTitle = async (file: FileItem) => {
-    try {
-      const title = file.name.replace(".md", "");
-      await navigator.clipboard.writeText(title);
-      toast.success("标题已复制");
-    } catch {
-      toast.error("复制失败");
-    }
-    closeMenu();
-  };
-
-  const submitRename = async () => {
-    if (renamingPath && renameValue) {
-      const file = files.find((f) => f.path === renamingPath);
-      if (file) {
-        await renameFile(file, renameValue);
-      }
-    }
-    setRenamingPath(null);
   };
 
   return (
@@ -143,19 +164,54 @@ export function FileSidebar() {
       <div className="fs-header">
         <div
           className="fs-workspace-info"
-          onClick={selectWorkspace}
-          title={workspacePath || "选择工作区"}
+          onClick={state.selectWorkspace}
+          title={state.workspacePath || "选择工作区"}
         >
           <FolderOpen size={14} />
           <span>
-            {workspacePath ? workspacePath.split("/").pop() : "选择工作区"}
+            {state.workspacePath
+              ? getBaseName(state.workspacePath)
+              : "选择工作区"}
           </span>
         </div>
         <div className="fs-actions">
           <button
             className="fs-btn-secondary fs-btn-icon-only"
-            onClick={createFile}
-            title="新建文章"
+            onClick={() => state.setShowNewFolderModal(true)}
+            data-tooltip="新建文件夹"
+            onMouseEnter={(e) => state.showTooltip(e, "新建文件夹")}
+            onMouseLeave={state.hideTooltip}
+            onFocus={(e) => state.showTooltip(e, "新建文件夹")}
+            onBlur={state.hideTooltip}
+          >
+            <FolderPlus size={16} />
+          </button>
+          <button
+            className="fs-btn-secondary fs-btn-icon-only"
+            onClick={() => state.createFile(state.activeFolder || undefined)}
+            data-tooltip={
+              state.activeFolder
+                ? `在 ${getBaseName(state.activeFolder)} 中新建`
+                : "新建文章"
+            }
+            onMouseEnter={(e) =>
+              state.showTooltip(
+                e,
+                state.activeFolder
+                  ? `在 ${getBaseName(state.activeFolder)} 中新建`
+                  : "新建文章",
+              )
+            }
+            onMouseLeave={state.hideTooltip}
+            onFocus={(e) =>
+              state.showTooltip(
+                e,
+                state.activeFolder
+                  ? `在 ${getBaseName(state.activeFolder)} 中新建`
+                  : "新建文章",
+              )
+            }
+            onBlur={state.hideTooltip}
           >
             <Plus size={16} />
           </button>
@@ -168,77 +224,54 @@ export function FileSidebar() {
           <input
             type="text"
             placeholder="搜索文件..."
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
+            value={state.filter}
+            onChange={(e) => state.setFilter(e.target.value)}
           />
         </div>
       </div>
 
       <div className="fs-body">
-        <div className="fs-list">
-          {visibleFiles.map((file) => (
+        <div
+          className={`fs-list ${state.dragOverTarget === ROOT_DROP_TARGET ? "drop-target" : ""}`}
+          onContextMenu={(e) => {
+            if (e.target === e.currentTarget) state.handleEmptyContextMenu(e);
+          }}
+          onDragOver={(e) => {
+            if (!state.isDragEnabled) return;
+            if (e.target !== e.currentTarget) return;
+            e.preventDefault();
+            state.setDragOverTarget(ROOT_DROP_TARGET);
+          }}
+          onDrop={state.handleDropToRoot}
+          onDragLeave={(e) => state.handleDragLeave(e, ROOT_DROP_TARGET)}
+        >
+          {!state.filter && (
             <div
-              key={file.path}
-              className={`fs-item ${currentFile?.path === file.path ? "active" : ""}`}
-              onClick={() => openFile(file)}
-              onContextMenu={(e) => handleContextMenu(e, file)}
+              className={`fs-folder ${state.activeFolder === null ? "active" : ""} ${state.dragOverTarget === ROOT_DROP_TARGET ? "drop-target" : ""}`}
+              onClick={() => state.setActiveFolder(null)}
+              onDragOver={(e) => {
+                if (!state.isDragEnabled) return;
+                e.preventDefault();
+                e.stopPropagation();
+                state.setDragOverTarget(ROOT_DROP_TARGET);
+              }}
+              onDrop={(e) => state.handleDropToFolder(e, "")}
+              onDragLeave={(e) => state.handleDragLeave(e, ROOT_DROP_TARGET)}
             >
-              <div className="fs-item-main">
-                <div className="fs-title-block">
-                  <span className="fs-time">
-                    {new Date(file.updatedAt).toLocaleString()}
-                  </span>
-                  {renamingPath === file.path ? (
-                    <div
-                      className="fs-rename"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <input
-                        value={renameValue}
-                        onChange={(e) => setRenameValue(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") submitRename();
-                          if (e.key === "Escape") setRenamingPath(null);
-                        }}
-                        autoFocus
-                      />
-                      <button onClick={() => submitRename()}>确认</button>
-                      <button onClick={() => setRenamingPath(null)}>
-                        取消
-                      </button>
-                    </div>
-                  ) : (
-                    <span className="fs-title" title={file.name}>
-                      {file.name}
-                    </span>
-                  )}
-                  {renamingPath !== file.path && (
-                    <span className="fs-theme-info">
-                      {currentFile?.path === file.path
-                        ? currentThemeName
-                        : file.themeName || "默认主题"}
-                    </span>
-                  )}
-                </div>
-                <button
-                  className="fs-action-trigger"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleContextMenu(e, file);
-                  }}
-                >
-                  <MoreHorizontal size={16} />
-                </button>
-              </div>
-            </div>
-          ))}
-          {/* 无限滚动触发器 */}
-          {hasMore && (
-            <div ref={loadMoreRef} className="fs-load-more">
-              <span>加载更多...</span>
+              <FolderOpen size={14} className="fs-folder-type-icon" />
+              <span className="fs-folder-name">
+                {state.workspacePath
+                  ? getBaseName(state.workspacePath)
+                  : "根目录"}
+              </span>
             </div>
           )}
-          {filteredFiles.length === 0 && (
+          {state.filter
+            ? (state.filteredItems as FileItem[]).map((file) =>
+                renderFileItem(file),
+              )
+            : renderTreeItems(state.files)}
+          {state.filteredItems.length === 0 && (
             <div className="fs-empty">暂无文件</div>
           )}
         </div>
@@ -246,74 +279,123 @@ export function FileSidebar() {
 
       <SidebarFooter />
 
-      {/* Context Menu Portal */}
-      {menuOpen &&
-        createPortal(
-          <div className="fs-context-menu-overlay" onClick={closeMenu}>
-            <div
-              className="fs-context-menu"
-              style={{ top: menuPos.y, left: menuPos.x }}
-            >
-              <button onClick={() => menuTarget && copyTitle(menuTarget)}>
-                <Copy size={14} /> 复制标题
-              </button>
-              <button onClick={() => menuTarget && startRename(menuTarget)}>
-                <Edit2 size={14} /> 重命名
-              </button>
-              <button
-                className="danger"
-                onClick={() => {
-                  setDeleteTarget(menuTarget);
-                  closeMenu();
-                }}
-              >
-                <Trash2 size={14} /> 删除
-              </button>
-            </div>
-          </div>,
-          document.body,
-        )}
-      {deleteTarget &&
-        createPortal(
-          <div
-            className="fs-confirm-backdrop"
-            onClick={() => !deleting && setDeleteTarget(null)}
-          >
-            <div
-              className="fs-confirm-modal"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <h4>删除文件</h4>
-              <p>确定要删除“{deleteTarget.name}”吗？此操作不可撤销。</p>
-              <div className="fs-confirm-actions">
-                <button
-                  className="btn-secondary"
-                  onClick={() => setDeleteTarget(null)}
-                  disabled={deleting}
-                >
-                  取消
-                </button>
-                <button
-                  className="btn-danger"
-                  onClick={async () => {
-                    setDeleting(true);
-                    try {
-                      await deleteFile(deleteTarget);
-                    } finally {
-                      setDeleting(false);
-                      setDeleteTarget(null);
-                      closeMenu();
-                    }
-                  }}
-                  disabled={deleting}
-                >
-                  {deleting ? "删除中..." : "确认删除"}
-                </button>
-              </div>
-            </div>
-          </div>,
-          document.body,
-        )}
+      {state.menuOpen && (
+        <ContextMenu
+          position={state.menuPos}
+          menuTarget={state.menuTarget}
+          menuTargetFolder={state.menuTargetFolder}
+          showMoveMenu={state.showMoveMenu}
+          allFolders={state.allFolders}
+          folderMoveTargets={
+            state.menuTargetFolder
+              ? state.getFolderMoveTargets(state.menuTargetFolder)
+              : []
+          }
+          onClose={state.closeMenu}
+          onCopyTitle={() =>
+            state.menuTarget && state.copyTitle(state.menuTarget)
+          }
+          onStartRename={() =>
+            state.menuTarget && state.startRename(state.menuTarget)
+          }
+          onToggleMoveMenu={() => state.setShowMoveMenu(!state.showMoveMenu)}
+          onMoveToFolder={state.handleMoveToFolder}
+          onMoveFolder={state.handleMoveFolder}
+          onDeleteFile={() => {
+            if (state.menuTarget) {
+              state.setDeleteTarget(state.menuTarget);
+              state.closeMenu();
+            }
+          }}
+          onDeleteFolder={() => {
+            if (state.menuTargetFolder) {
+              state.prepareDeleteFolder(state.menuTargetFolder);
+              state.closeMenu();
+            }
+          }}
+          onStartRenameFolder={() => {
+            if (state.menuTargetFolder) {
+              state.setRenameFolderTarget(state.menuTargetFolder);
+              state.setRenameFolderValue(state.menuTargetFolder.name);
+              state.setShowRenameFolderModal(true);
+              state.closeMenu();
+            }
+          }}
+          onNewFolder={() => {
+            state.setShowNewFolderModal(true);
+            state.closeMenu();
+          }}
+        />
+      )}
+
+      {state.deleteTarget && (
+        <DeleteFileModal
+          target={state.deleteTarget}
+          deleting={state.deleting}
+          onConfirm={async () => {
+            state.setDeleting(true);
+            try {
+              await state.deleteFile(state.deleteTarget!);
+            } finally {
+              state.setDeleting(false);
+              state.setDeleteTarget(null);
+            }
+          }}
+          onCancel={() => state.setDeleteTarget(null)}
+        />
+      )}
+
+      {state.deleteFolderTarget && (
+        <DeleteFolderModal
+          target={state.deleteFolderTarget}
+          extraItems={state.deleteFolderExtras}
+          deleting={state.deleting}
+          onConfirm={async () => {
+            state.setDeleting(true);
+            try {
+              await state.deleteFolder(state.deleteFolderTarget!.path, {
+                recursive:
+                  state.deleteFolderTarget!.children.length > 0 ||
+                  state.deleteFolderExtras.length > 0,
+              });
+            } finally {
+              state.setDeleting(false);
+              state.setDeleteFolderTarget(null);
+              state.setDeleteFolderExtras([]);
+            }
+          }}
+          onCancel={() => {
+            state.setDeleteFolderTarget(null);
+            state.setDeleteFolderExtras([]);
+          }}
+        />
+      )}
+
+      {state.showRenameFolderModal && (
+        <RenameFolderModal
+          value={state.renameFolderValue}
+          onChange={state.setRenameFolderValue}
+          onConfirm={state.handleRenameFolder}
+          onCancel={state.closeRenameFolderModal}
+        />
+      )}
+
+      {state.showNewFolderModal && (
+        <NewFolderModal
+          value={state.newFolderName}
+          onChange={state.setNewFolderName}
+          onConfirm={state.handleCreateFolder}
+          onCancel={() => state.setShowNewFolderModal(false)}
+        />
+      )}
+
+      {state.tooltip && (
+        <Tooltip
+          text={state.tooltip.text}
+          x={state.tooltip.x}
+          y={state.tooltip.y}
+        />
+      )}
     </aside>
   );
 }

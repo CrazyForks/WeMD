@@ -43,6 +43,25 @@ function formatDate(value?: string | number | Date) {
   return new Date(value).toLocaleString();
 }
 
+function flattenFileItems(items: StorageFileItem[]): StorageFileItem[] {
+  const result: StorageFileItem[] = [];
+  for (const item of items) {
+    const meta = item.meta as
+      | { isDirectory?: boolean; children?: StorageFileItem[] }
+      | undefined;
+    if (meta?.isDirectory) {
+      if (Array.isArray(meta.children)) {
+        result.push(...flattenFileItems(meta.children));
+      }
+      continue;
+    }
+    if (item.name.endsWith(".md")) {
+      result.push(item);
+    }
+  }
+  return result;
+}
+
 interface FileSystemHistoryProps {
   adapter: StorageAdapter;
 }
@@ -69,8 +88,14 @@ export function FileSystemHistory({ adapter }: FileSystemHistoryProps) {
     setLoading(true);
     try {
       const list = await adapter.listFiles();
-      setFiles(list);
-      if (activePath && !list.find((item) => item.path === activePath)) {
+      const flatFiles = flattenFileItems(list);
+      const sorted = [...flatFiles].sort((a, b) => {
+        const timeA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+        const timeB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+        return timeB - timeA;
+      });
+      setFiles(sorted);
+      if (activePath && !sorted.find((item) => item.path === activePath)) {
         setActivePath(null);
       }
     } catch (error) {

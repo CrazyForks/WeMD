@@ -32,8 +32,9 @@
 
 .preview-container {
   flex: 1;
-  overflow: auto;
-  padding: 24px;
+  overflow-y: auto;
+  overflow-x: auto;
+  padding: 24px 0;
 }
 
 .preview-content {
