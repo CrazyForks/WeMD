@@ -11,7 +11,7 @@ export const basicTheme = `/* 默认样式，最佳实践 */
   word-break: break-word;
   word-wrap: break-word;
   text-align: left;
-  font-family: Optima-Regular, Optima, PingFangSC-light, PingFangTC-light, 'PingFang SC', Cambria, Cochin, Georgia, Times, 'Times New Roman', serif;
+  font-family: Optima-Regular, Optima, PingFangSC-light, PingFangTC-light, 'PingFang SC', 'Microsoft YaHei', '微软雅黑', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
 
 /* 段落 */
