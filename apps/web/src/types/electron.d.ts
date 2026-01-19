@@ -16,10 +16,7 @@ interface ElectronAPI {
     readFile: (
       filePath: string,
     ) => Promise<{ success: boolean; content?: string; error?: string }>;
-    createFile: (payload: {
-      filename?: string;
-      content?: string;
-    }) => Promise<{
+    createFile: (payload: { filename?: string; content?: string }) => Promise<{
       success: boolean;
       filePath?: string;
       filename?: string;
@@ -37,9 +34,7 @@ interface ElectronAPI {
       filePath: string,
     ) => Promise<{ success: boolean; error?: string }>;
     revealInFinder: (filePath: string) => Promise<void>;
-    createFolder: (
-      folderName: string,
-    ) => Promise<{
+    createFolder: (folderName: string) => Promise<{
       success: boolean;
       path?: string;
       name?: string;
@@ -75,6 +70,9 @@ interface ElectronAPI {
     maximize: () => Promise<void>;
     close: () => Promise<void>;
     isMaximized: () => Promise<boolean>;
+  };
+  shell?: {
+    openExternal: (url: string) => Promise<void>;
   };
 }
 

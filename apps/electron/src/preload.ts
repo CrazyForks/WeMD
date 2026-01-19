@@ -94,5 +94,9 @@ contextBridge.exposeInMainWorld('electron', {
             ipcRenderer.removeListener('update:error', handler);
         },
         openReleases: () => ipcRenderer.invoke('update:openReleases'),
+    },
+
+    shell: {
+        openExternal: (url: string) => ipcRenderer.invoke('shell:openExternal', url),
     }
 });

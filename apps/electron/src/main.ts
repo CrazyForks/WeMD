@@ -214,6 +214,7 @@ function createWindow() {
             height: 48,
         },
         trafficLightPosition: { x: 20, y: 28 },
+        show: false, // 延迟显示，避免闪烁
     });
 
     const startUrl = process.env.ELECTRON_START_URL
@@ -227,6 +228,14 @@ function createWindow() {
     console.log('[WeMD] resourcesPath:', process.resourcesPath);
 
     mainWindow.loadURL(startUrl);
+
+    // 准备就绪后显示并最大化，解决 macOS 启动不最大化问题
+    mainWindow.once('ready-to-show', () => {
+        if (!mainWindow) return;
+        mainWindow.maximize();
+        mainWindow.show();
+    });
+
     mainWindow.on('closed', () => {
         mainWindow = null;
         stopWatching();
@@ -647,6 +656,12 @@ ipcMain.handle(
         }
     }
 );
+
+ipcMain.handle('shell:openExternal', async (_event: IpcMainInvokeEvent, url: string) => {
+    if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+        await shell.openExternal(url);
+    }
+});
 
 // 更新相关
 ipcMain.handle('update:openReleases', () => {

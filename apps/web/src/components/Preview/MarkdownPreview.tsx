@@ -223,7 +223,18 @@ export function MarkdownPreview() {
         <span className="preview-title">实时预览</span>
         <span className="preview-subtitle">微信排版效果</span>
       </div>
-      <div className="preview-container" ref={scrollContainerRef}>
+      <div
+        className="preview-container"
+        ref={scrollContainerRef}
+        onClick={(e) => {
+          const target = e.target as HTMLElement;
+          const link = target.closest("a");
+          if (link && link.href && window.electron?.shell?.openExternal) {
+            e.preventDefault();
+            window.electron.shell.openExternal(link.href);
+          }
+        }}
+      >
         <div className="preview-content">
           <style
             dangerouslySetInnerHTML={{
