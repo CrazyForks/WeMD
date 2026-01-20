@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { DesignerVariables, HeadingStyle, HeadingLevel } from "./types";
 import { defaultVariables } from "./defaults";
 import { generateCSS } from "./generateCSS";
@@ -59,17 +59,25 @@ export function ThemeDesigner({
     }
   }, [initialVariables]);
 
+  // 使用 ref 存储回调函数，避免将其作为 useEffect 依赖导致无限循环
+  const onCSSChangeRef = useRef(onCSSChange);
+  const onVariablesChangeRef = useRef(onVariablesChange);
   useEffect(() => {
-    if (!initialVariables && !initialCSS) {
-      onCSSChange(generateCSS(defaultVariables));
-      onVariablesChange?.(defaultVariables);
-    }
-  }, [initialVariables, initialCSS, onCSSChange, onVariablesChange]);
+    onCSSChangeRef.current = onCSSChange;
+    onVariablesChangeRef.current = onVariablesChange;
+  });
 
   useEffect(() => {
-    onCSSChange(generateCSS(variables));
-    onVariablesChange?.(variables);
-  }, [variables, onCSSChange, onVariablesChange]);
+    if (!initialVariables && !initialCSS) {
+      onCSSChangeRef.current(generateCSS(defaultVariables));
+      onVariablesChangeRef.current?.(defaultVariables);
+    }
+  }, [initialVariables, initialCSS]);
+
+  useEffect(() => {
+    onCSSChangeRef.current(generateCSS(variables));
+    onVariablesChangeRef.current?.(variables);
+  }, [variables]);
 
   const updateVariable = <K extends keyof DesignerVariables>(
     key: K,
