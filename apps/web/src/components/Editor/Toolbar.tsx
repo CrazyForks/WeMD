@@ -4,9 +4,11 @@ import {
   Italic,
   Underline,
   Strikethrough,
+  Heading,
   Heading1,
   Heading2,
   Heading3,
+  Heading4,
   List,
   ListOrdered,
   Quote,
@@ -34,6 +36,7 @@ import toast from "react-hot-toast";
 import { ImageHostManager } from "../../services/image/ImageUploader";
 import type { ImageHostConfig } from "../../services/image/ImageUploader";
 import { setLinkToFootnoteEnabled } from "./ToolbarState";
+import { SyntaxHelpPopover } from "./SyntaxHelpPopover";
 import "./Toolbar.css";
 
 interface ToolbarProps {
@@ -162,7 +165,11 @@ export function Toolbar({ onInsert }: ToolbarProps) {
   const [uploading, setUploading] = useState(false);
   const [showMermaidMenu, setShowMermaidMenu] = useState(false);
   const [showMermaidMore, setShowMermaidMore] = useState(false);
+  const [showHeadingMenu, setShowHeadingMenu] = useState(false);
+  const [showListMenu, setShowListMenu] = useState(false);
   const mermaidMenuRef = useRef<HTMLDivElement>(null);
+  const headingMenuRef = useRef<HTMLDivElement>(null);
+  const listMenuRef = useRef<HTMLDivElement>(null);
   const mermaidMoreRef = useRef<HTMLDivElement>(null);
   const mermaidSubmenuRef = useRef<HTMLDivElement>(null);
   const [mermaidSubmenuSide, setMermaidSubmenuSide] = useState<
@@ -179,25 +186,33 @@ export function Toolbar({ onInsert }: ToolbarProps) {
     localStorage.setItem("wemd-link-to-footnote", String(linkToFootnote));
   }, [linkToFootnote]);
 
-  // 点击外部关闭菜单
+  // 点击外部关闭所有菜单
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        mermaidMenuRef.current &&
-        !mermaidMenuRef.current.contains(event.target as Node)
-      ) {
+      const target = event.target as Node;
+      // 关闭标题菜单
+      if (headingMenuRef.current && !headingMenuRef.current.contains(target)) {
+        setShowHeadingMenu(false);
+      }
+      // 关闭列表菜单
+      if (listMenuRef.current && !listMenuRef.current.contains(target)) {
+        setShowListMenu(false);
+      }
+      // 关闭 Mermaid 菜单
+      if (mermaidMenuRef.current && !mermaidMenuRef.current.contains(target)) {
         setShowMermaidMenu(false);
         setShowMermaidMore(false);
       }
     };
 
-    if (showMermaidMenu) {
+    const anyMenuOpen = showHeadingMenu || showListMenu || showMermaidMenu;
+    if (anyMenuOpen) {
       document.addEventListener("mousedown", handleClickOutside);
     }
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [showMermaidMenu]);
+  }, [showHeadingMenu, showListMenu, showMermaidMenu]);
 
   useEffect(() => {
     if (!showMermaidMore) return;
@@ -226,7 +241,8 @@ export function Toolbar({ onInsert }: ToolbarProps) {
     };
   }, [showMermaidMore]);
 
-  const tools = [
+  // 文本格式工具 - 独立按钮
+  const textFormatTools = [
     {
       icon: Bold,
       label: "粗体",
@@ -255,6 +271,10 @@ export function Toolbar({ onInsert }: ToolbarProps) {
       suffix: "~~",
       placeholder: "删除文字",
     },
+  ];
+
+  // 标题选项 - 下拉菜单
+  const headingOptions = [
     {
       icon: Heading1,
       label: "一级标题",
@@ -277,6 +297,17 @@ export function Toolbar({ onInsert }: ToolbarProps) {
       placeholder: "标题",
     },
     {
+      icon: Heading4,
+      label: "四级标题",
+      prefix: "#### ",
+      suffix: "",
+      placeholder: "标题",
+    },
+  ];
+
+  // 列表选项 - 下拉菜单
+  const listOptions = [
+    {
       icon: List,
       label: "无序列表",
       prefix: "- ",
@@ -290,6 +321,10 @@ export function Toolbar({ onInsert }: ToolbarProps) {
       suffix: "",
       placeholder: "列表项",
     },
+  ];
+
+  // 块级工具 - 独立按钮
+  const blockTools = [
     {
       icon: Quote,
       label: "引用",
@@ -304,7 +339,6 @@ export function Toolbar({ onInsert }: ToolbarProps) {
       suffix: "\n```",
       placeholder: "代码",
     },
-    // Mermaid 按钮单独处理
     {
       icon: Link,
       label: "链接",
@@ -332,6 +366,10 @@ export function Toolbar({ onInsert }: ToolbarProps) {
       const next = !prev;
       if (!next) {
         setShowMermaidMore(false);
+      } else {
+        // 关闭其他菜单
+        setShowHeadingMenu(false);
+        setShowListMenu(false);
       }
       return next;
     });
@@ -398,7 +436,84 @@ export function Toolbar({ onInsert }: ToolbarProps) {
 
   return (
     <div className="md-toolbar">
-      {tools.map((tool, index) => (
+      {/* 文本格式工具 */}
+      {textFormatTools.map((tool, index) => (
+        <button
+          key={index}
+          className="md-toolbar-btn"
+          onClick={() => onInsert(tool.prefix, tool.suffix, tool.placeholder)}
+          data-tooltip={tool.label}
+        >
+          <tool.icon size={16} />
+        </button>
+      ))}
+
+      {/* 标题下拉菜单 */}
+      <div className="md-toolbar-dropdown-container" ref={headingMenuRef}>
+        <button
+          className={`md-toolbar-btn ${showHeadingMenu ? "active" : ""}`}
+          onClick={() => {
+            setShowHeadingMenu((prev) => !prev);
+            setShowListMenu(false);
+            setShowMermaidMenu(false);
+          }}
+          data-tooltip="标题"
+        >
+          <Heading size={16} />
+        </button>
+        {showHeadingMenu && (
+          <div className="md-toolbar-dropdown-menu">
+            {headingOptions.map((option, idx) => (
+              <button
+                key={idx}
+                className="md-toolbar-dropdown-item"
+                onClick={() => {
+                  onInsert(option.prefix, option.suffix, option.placeholder);
+                  setShowHeadingMenu(false);
+                }}
+              >
+                <option.icon size={14} className="mr-2" />
+                <span>{option.label}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* 列表下拉菜单 */}
+      <div className="md-toolbar-dropdown-container" ref={listMenuRef}>
+        <button
+          className={`md-toolbar-btn ${showListMenu ? "active" : ""}`}
+          onClick={() => {
+            setShowListMenu((prev) => !prev);
+            setShowHeadingMenu(false);
+            setShowMermaidMenu(false);
+          }}
+          data-tooltip="列表"
+        >
+          <List size={16} />
+        </button>
+        {showListMenu && (
+          <div className="md-toolbar-dropdown-menu">
+            {listOptions.map((option, idx) => (
+              <button
+                key={idx}
+                className="md-toolbar-dropdown-item"
+                onClick={() => {
+                  onInsert(option.prefix, option.suffix, option.placeholder);
+                  setShowListMenu(false);
+                }}
+              >
+                <option.icon size={14} className="mr-2" />
+                <span>{option.label}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* 块级工具 */}
+      {blockTools.map((tool, index) => (
         <button
           key={index}
           className="md-toolbar-btn"
@@ -502,6 +617,9 @@ export function Toolbar({ onInsert }: ToolbarProps) {
       >
         <ListEnd size={16} />
       </button>
+
+      {/* 语法帮助 */}
+      <SyntaxHelpPopover />
 
       {/* 隐藏的文件输入 */}
       <input
