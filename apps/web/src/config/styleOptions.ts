@@ -1,10 +1,3 @@
-function expandHexColor(color: string): string {
-  if (color.length === 4 && color.startsWith("#")) {
-    return `#${color[1]}${color[1]}${color[2]}${color[2]}${color[3]}${color[3]}`;
-  }
-  return color;
-}
-
 export interface StyleOption<T = string> {
   label: string;
   value: T;
@@ -71,115 +64,20 @@ export const marginPresets = {
   step: 4,
 };
 
-export interface HeadingPresetCss {
-  content: string;
-  extra?: string;
-}
-
-export interface HeadingPreset {
+export interface StylePresetOption {
   id: string;
   label: string;
-  cssTemplate: (color: string, tag: string) => HeadingPresetCss;
 }
 
-export const headingStylePresets: HeadingPreset[] = [
-  {
-    id: "simple",
-    label: "简约",
-    cssTemplate: () => ({ content: "" }),
-  },
-  {
-    id: "left-border",
-    label: "左侧竖线",
-    cssTemplate: (color) => ({
-      content: `
-            border-left: 4px solid ${color};
-            padding-left: 10px;
-        `,
-    }),
-  },
-  {
-    id: "bottom-border",
-    label: "底部下划线",
-    cssTemplate: (color) => ({
-      content: `
-            border-bottom: 2px solid ${color};
-            padding-bottom: 8px;
-        `,
-    }),
-  },
-  {
-    id: "double-line",
-    label: "双线装饰",
-    cssTemplate: (color) => ({
-      content: `
-            border-top: 2px solid ${color};
-            border-bottom: 2px solid ${color};
-            padding: 8px 0;
-        `,
-    }),
-  },
-  {
-    id: "boxed",
-    label: "背景块",
-    cssTemplate: (color) => ({
-      content: `
-            background: ${color}15;
-            border-left: 4px solid ${color};
-            padding: 8px 12px;
-            border-radius: 4px;
-        `,
-    }),
-  },
-  {
-    id: "bottom-highlight",
-    label: "底部高亮",
-    cssTemplate: (color) => ({
-      content: `
-            display: inline-block;
-            background: linear-gradient(to bottom, transparent 60%, ${color}40 60%);
-            padding: 0 4px;
-        `,
-    }),
-  },
-  {
-    id: "pill",
-    label: "高亮胶囊",
-    cssTemplate: (color) => ({
-      content: `
-            background: ${color};
-            color: #fff;
-            padding: 4px 16px;
-            border-radius: 20px;
-            display: inline-block;
-        `,
-    }),
-  },
-  {
-    id: "bracket",
-    label: "括号装饰",
-    cssTemplate: (color, tag) => ({
-      content: `
-            display: inline-block;
-            position: relative;
-            padding: 0 10px;
-        `,
-      extra: `
-        #wemd ${tag} .content::before {
-            content: '[';
-            margin-right: 5px;
-            color: ${color};
-            font-weight: bold;
-        }
-        #wemd ${tag} .content::after {
-            content: ']';
-            margin-left: 5px;
-            color: ${color};
-            font-weight: bold;
-        }
-        `,
-    }),
-  },
+export const headingStylePresets: StylePresetOption[] = [
+  { id: "simple", label: "简约" },
+  { id: "left-border", label: "左侧竖线" },
+  { id: "bottom-border", label: "底部下划线" },
+  { id: "double-line", label: "双线装饰" },
+  { id: "boxed", label: "背景块" },
+  { id: "bottom-highlight", label: "底部高亮" },
+  { id: "pill", label: "高亮胶囊" },
+  { id: "bracket", label: "括号装饰" },
 ];
 
 export const boldStyleOptions = [
@@ -191,225 +89,13 @@ export const boldStyleOptions = [
   { id: "dot", label: "着重号" },
 ];
 
-export interface QuotePresetCss {
-  base: string;
-  extra?: string;
-}
-
-export interface QuotePreset {
-  id: string;
-  label: string;
-  cssTemplate: (
-    color: string,
-    bgColor: string,
-    textColor: string,
-    borderWidth: number,
-    borderStyle: string,
-    padding: number,
-    centered?: boolean,
-  ) => QuotePresetCss;
-}
-
-export const quoteStylePresets: QuotePreset[] = [
-  {
-    id: "left-border",
-    label: "经典竖线",
-    cssTemplate: (
-      _color,
-      bgColor,
-      _textColor,
-      borderWidth,
-      borderStyle,
-      _padding,
-      _centered,
-    ) => ({
-      base: `
-            background: ${bgColor};
-            border-left-style: ${borderStyle};
-            border-left-width: ${borderWidth}px;
-        `,
-    }),
-  },
-  {
-    id: "top-bottom-border",
-    label: "上下双线",
-    cssTemplate: (
-      color,
-      bgColor,
-      _textColor,
-      borderWidth,
-      borderStyle,
-      _padding,
-      _centered,
-    ) => ({
-      base: `
-            border-top: ${borderWidth}px ${borderStyle} ${color};
-            border-bottom: ${borderWidth}px ${borderStyle} ${color};
-            border-left: none !important;
-            background: ${bgColor};
-            text-align: center;
-        `,
-      extra: `
-        #wemd blockquote p { text-align: center !important; }
-        `,
-    }),
-  },
-  {
-    id: "quotation-marks",
-    label: "大引号",
-    cssTemplate: (
-      color,
-      bgColor,
-      _textColor,
-      _borderWidth,
-      _borderStyle,
-      padding,
-      _centered,
-    ) => {
-      const c = expandHexColor(color);
-
-      // 基础 padding + 40px 用于避让引号
-      const leftPadding = (padding || 20) + 40;
-
-      return {
-        base: `
-            background: ${bgColor};
-            border-left: none !important;
-            border-radius: 4px;
-            padding-left: ${leftPadding}px !important;
-        `,
-        extra: `
-        #wemd blockquote::before {
-            content: "“";
-            display: block;
-            height: 0;
-            font-size: 60px;
-            color: ${c};
-            font-family: Georgia, serif;
-            line-height: 1;
-            margin-left: -40px;
-            margin-top: -6px;
-            opacity: 0.3;
-            pointer-events: none;
-        }
-        #wemd blockquote p {
-            position: relative;
-            z-index: 1;
-        }
-        `,
-      };
-    },
-  },
-  {
-    id: "boxed",
-    label: "极简边框",
-    cssTemplate: (
-      color,
-      bgColor,
-      _textColor,
-      borderWidth,
-      borderStyle,
-      _padding,
-      _centered,
-    ) => {
-      const c = expandHexColor(color);
-      return {
-        base: `
-            border: ${borderWidth}px ${borderStyle} ${c}40;
-            border-left: ${borderWidth}px ${borderStyle} ${c}40 !important;
-            background: ${bgColor};
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
-        `,
-      };
-    },
-  },
-  {
-    id: "center-accent",
-    label: "中心强调",
-    cssTemplate: (
-      color,
-      _bgColor,
-      _textColor,
-      borderWidth,
-      _borderStyle,
-      _padding,
-      _centered,
-    ) => ({
-      base: `
-            background: transparent;
-            border-left: none !important;
-            text-align: center;
-            position: relative;
-        `,
-      extra: `
-        #wemd blockquote p { text-align: center !important; }
-        #wemd blockquote::before {
-            content: "";
-            display: block;
-            width: 40px;
-            height: ${borderWidth}px;
-            background: ${color};
-            margin: 0 auto 15px;
-            opacity: 0.8;
-        }
-        #wemd blockquote::after {
-            content: "";
-            display: block;
-            width: 40px;
-            height: ${borderWidth}px;
-            background: ${color};
-            margin: 15px auto 0;
-            opacity: 0.8;
-        }
-        `,
-    }),
-  },
-  {
-    id: "corner-frame",
-    label: "直角边框",
-    cssTemplate: (
-      color,
-      bgColor,
-      _textColor,
-      borderWidth,
-      borderStyle,
-      _padding,
-      _centered,
-    ) => {
-      const c = expandHexColor(color);
-      return {
-        base: `
-            background: ${bgColor};
-            border-left: none !important;
-            position: relative;
-            position: relative;
-        `,
-        extra: `
-        #wemd blockquote::before {
-            content: "";
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 20px;
-            height: 20px;
-            border-top: ${borderWidth}px ${borderStyle} ${c};
-            border-left: ${borderWidth}px ${borderStyle} ${c};
-        }
-        #wemd blockquote::after {
-            content: "";
-            position: absolute;
-            bottom: 0;
-            right: 0;
-            width: 20px;
-            height: 20px;
-            border-bottom: ${borderWidth}px ${borderStyle} ${c};
-            border-right: ${borderWidth}px ${borderStyle} ${c};
-        }
-        `,
-      };
-    },
-  },
+export const quoteStylePresets: StylePresetOption[] = [
+  { id: "left-border", label: "经典竖线" },
+  { id: "top-bottom-border", label: "上下双线" },
+  { id: "quotation-marks", label: "大引号" },
+  { id: "boxed", label: "极简边框" },
+  { id: "center-accent", label: "中心强调" },
+  { id: "corner-frame", label: "直角边框" },
 ];
 
 export const ulStyleOptions: StyleOption[] = [
