@@ -60,7 +60,7 @@ describe("ThemePanel", () => {
         themeId: "default",
         themeName: "默认主题",
         customCSS: "",
-        customThemes: [],
+        customThemes: mockThemes.filter((theme) => !theme.isBuiltIn),
         selectTheme: mockSelectTheme,
         setCustomCSS: vi.fn(),
         getThemeCSS: vi.fn().mockReturnValue(""),
@@ -77,9 +77,12 @@ describe("ThemePanel", () => {
     });
 
     // Setup editor store mock
-    vi.mocked(useEditorStore).mockReturnValue({
-      markdown: "# Test",
-    });
+    vi.mocked(useEditorStore).mockImplementation(((
+      selector?: (state: { markdown: string }) => unknown,
+    ) => {
+      const state = { markdown: "# Test" };
+      return typeof selector === "function" ? selector(state) : state;
+    }) as unknown as typeof useEditorStore);
     // Also mock getState for direct calls
     (useEditorStore as unknown as { getState: () => unknown }).getState =
       () => ({

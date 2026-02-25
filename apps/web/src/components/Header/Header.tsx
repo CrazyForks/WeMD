@@ -124,7 +124,7 @@ export function Header() {
   const [autoHide, setAutoHide] = useState(() => {
     if (typeof window === "undefined") return false;
     try {
-      return localStorage.getItem("wemd-header-autohide") === "true";
+      return window.localStorage.getItem("wemd-header-autohide") === "true";
     } catch {
       return false;
     }
@@ -134,7 +134,7 @@ export function Header() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
-      localStorage.setItem("wemd-header-autohide", String(autoHide));
+      window.localStorage.setItem("wemd-header-autohide", String(autoHide));
     } catch {
       // 忽略存储不可用的场景（如隐私模式）
     }

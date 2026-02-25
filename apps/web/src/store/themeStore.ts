@@ -29,13 +29,29 @@ const clearDarkCssCache = () => darkCssCache.clear();
 const CUSTOM_THEMES_KEY = "wemd-custom-themes";
 const SELECTED_THEME_KEY = "wemd-selected-theme";
 
-const canUseLocalStorage = () =>
-  typeof window !== "undefined" && typeof window.localStorage !== "undefined";
+const getBrowserStorage = (): Storage | null => {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  try {
+    const storage = window.localStorage as Partial<Storage>;
+    if (
+      typeof storage.getItem !== "function" ||
+      typeof storage.setItem !== "function"
+    ) {
+      return null;
+    }
+    return storage as Storage;
+  } catch {
+    return null;
+  }
+};
 
 const loadCustomThemes = (): CustomTheme[] => {
-  if (!canUseLocalStorage()) return [];
+  const storage = getBrowserStorage();
+  if (!storage) return [];
   try {
-    const stored = localStorage.getItem(CUSTOM_THEMES_KEY);
+    const stored = storage.getItem(CUSTOM_THEMES_KEY);
     if (!stored) return [];
     const themes = JSON.parse(stored) as CustomTheme[];
 
@@ -73,9 +89,10 @@ const loadCustomThemes = (): CustomTheme[] => {
 
 // 保存自定义主题到 localStorage
 const saveCustomThemes = (themes: CustomTheme[]): void => {
-  if (!canUseLocalStorage()) return;
+  const storage = getBrowserStorage();
+  if (!storage) return;
   try {
-    localStorage.setItem(CUSTOM_THEMES_KEY, JSON.stringify(themes));
+    storage.setItem(CUSTOM_THEMES_KEY, JSON.stringify(themes));
   } catch (error) {
     console.error("保存自定义主题失败:", error);
   }
@@ -83,9 +100,10 @@ const saveCustomThemes = (themes: CustomTheme[]): void => {
 
 // 保存选中主题到 localStorage
 const saveSelectedTheme = (themeId: string, themeName: string): void => {
-  if (!canUseLocalStorage()) return;
+  const storage = getBrowserStorage();
+  if (!storage) return;
   try {
-    localStorage.setItem(
+    storage.setItem(
       SELECTED_THEME_KEY,
       JSON.stringify({ id: themeId, name: themeName }),
     );
@@ -96,9 +114,10 @@ const saveSelectedTheme = (themeId: string, themeName: string): void => {
 
 // 从 localStorage 加载选中主题
 const loadSelectedTheme = (): { id: string; name: string } | null => {
-  if (!canUseLocalStorage()) return null;
+  const storage = getBrowserStorage();
+  if (!storage) return null;
   try {
-    const stored = localStorage.getItem(SELECTED_THEME_KEY);
+    const stored = storage.getItem(SELECTED_THEME_KEY);
     if (!stored) return null;
     return JSON.parse(stored);
   } catch (error) {

@@ -8,6 +8,10 @@ import { convertLinksToFootnotes } from "../utils/linkFootnote";
 import { getLinkToFootnoteEnabled } from "../components/Editor/ToolbarState";
 import { useThemeStore } from "../store/themeStore";
 import {
+  materializeCounterPseudoContent,
+  stripCounterPseudoRules,
+} from "./wechatCounterCompat";
+import {
   getMermaidConfig,
   getThemedMermaidDiagram,
 } from "../utils/mermaidConfig";
@@ -140,7 +144,6 @@ const renderMermaidBlocks = async (container: HTMLElement): Promise<void> => {
 
   ensureMermaidInitialized();
   const designerVariables = getThemeInfo();
-  const mermaidTheme = (designerVariables?.mermaidTheme as string) || "base";
   const renderIdBase = `wemd-mermaid-${Date.now()}`;
 
   // 构建 Mermaid 配置
@@ -195,10 +198,15 @@ export async function copyToWechat(
     const parser = createMarkdownParser();
     const rawHtml = parser.render(markdown);
     const themedCss = buildCopyCss(css);
+    const sanitizedCss = stripCounterPseudoRules(themedCss);
     const sourceHtml = getLinkToFootnoteEnabled()
       ? convertLinksToFootnotes(rawHtml)
       : rawHtml;
-    const styledHtml = processHtml(sourceHtml, themedCss, true, true);
+    const materializedHtml = materializeCounterPseudoContent(
+      sourceHtml,
+      themedCss,
+    );
+    const styledHtml = processHtml(materializedHtml, sanitizedCss, true, true);
     // 转换 checkbox 为 emoji，微信不支持 input 标签
     const finalHtml = convertCheckboxesToEmoji(styledHtml);
 

@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { Header } from "../../components/Header/Header";
 import { useWindowControls } from "../../hooks/useWindowControls";
 import { useUITheme } from "../../hooks/useUITheme";
@@ -33,11 +33,44 @@ describe("Header", () => {
   const mockMinimize = vi.fn();
   const mockMaximize = vi.fn();
   const mockClose = vi.fn();
+  let storageMock: {
+    getItem: ReturnType<typeof vi.fn>;
+    setItem: ReturnType<typeof vi.fn>;
+    removeItem: ReturnType<typeof vi.fn>;
+    clear: ReturnType<typeof vi.fn>;
+    key: ReturnType<typeof vi.fn>;
+    length: number;
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
-    if (typeof localStorage !== "undefined") {
-      localStorage.removeItem("wemd-header-autohide");
+    const store = new Map<string, string>();
+    storageMock = {
+      getItem: vi.fn((key: string) => store.get(key) ?? null),
+      setItem: vi.fn((key: string, value: string) => {
+        store.set(key, String(value));
+      }),
+      removeItem: vi.fn((key: string) => {
+        store.delete(key);
+      }),
+      clear: vi.fn(() => {
+        store.clear();
+      }),
+      key: vi.fn((index: number) => Array.from(store.keys())[index] ?? null),
+      length: 0,
+    };
+    Object.defineProperty(storageMock, "length", {
+      get: () => store.size,
+      enumerable: true,
+    });
+    vi.stubGlobal("localStorage", storageMock);
+
+    if (
+      typeof window !== "undefined" &&
+      window.localStorage &&
+      typeof window.localStorage.removeItem === "function"
+    ) {
+      window.localStorage.removeItem("wemd-header-autohide");
     }
 
     // Setup default hook returns
@@ -61,6 +94,10 @@ describe("Header", () => {
       maximize: mockMaximize,
       close: mockClose,
     });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it("renders logo and core elements", () => {
@@ -149,15 +186,16 @@ describe("Header", () => {
     expect(screen.getByLabelText("复制到公众号")).toBeInTheDocument();
   });
 
-  it("persists header visibility to localStorage", () => {
-    const setItemSpy = vi.spyOn(Storage.prototype, "setItem");
-
+  it("persists header visibility to localStorage", async () => {
     render(<Header />);
 
     fireEvent.click(screen.getByLabelText("隐藏标题栏"));
 
-    expect(setItemSpy).toHaveBeenCalledWith("wemd-header-autohide", "true");
-
-    setItemSpy.mockRestore();
+    await waitFor(() => {
+      expect(storageMock.setItem).toHaveBeenCalledWith(
+        "wemd-header-autohide",
+        "true",
+      );
+    });
   });
 });
