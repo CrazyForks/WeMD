@@ -92,10 +92,18 @@ WeMD 内置了一套**色彩语义保全算法**，可在编辑器中预览微�
 ### Docker 部署
 
 ```bash
-docker-compose up -d
+docker compose pull
+docker compose up -d
 ```
 
 访问 `http://localhost:8080` 即可使用。
+
+默认会拉取 `ghcr.io/tenngoxars/wemd-web:latest`。  
+如需指定版本镜像，可覆盖环境变量：
+
+```bash
+WEMD_IMAGE=ghcr.io/tenngoxars/wemd-web:v1.2.4 docker compose up -d
+```
 
 ---
 

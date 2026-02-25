@@ -1,6 +1,6 @@
 services:
   web:
-    build: .
+    image: ${WEMD_IMAGE:-ghcr.io/tenngoxars/wemd-web:latest}
     ports:
-      - "8080:80"
+      - "${WEMD_PORT:-8080}:80"
     restart: unless-stopped
