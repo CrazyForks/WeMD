@@ -56,7 +56,9 @@ title: "旧标题"
 
 # 正文
 `;
-    const writeFile = vi.fn(async () => undefined);
+    const writeFile = vi.fn(
+      async (_path: string, _content: string) => undefined,
+    );
     const listFiles = vi.fn(
       async (): Promise<FileItem[]> => [
         {

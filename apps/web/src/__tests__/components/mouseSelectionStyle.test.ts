@@ -9,7 +9,9 @@ import {
 
 function createMockView(
   doc: string,
-  selection: EditorSelection = EditorSelection.cursor(0),
+  selection: EditorSelection = EditorSelection.create([
+    EditorSelection.cursor(0),
+  ]),
 ): EditorView {
   const state = EditorState.create({ doc, selection });
   return {

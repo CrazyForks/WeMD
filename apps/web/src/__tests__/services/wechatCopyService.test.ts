@@ -76,6 +76,37 @@ import {
   stripCopyMetadata,
 } from "../../services/wechatCopyService";
 
+type MockClipboardItemData = Record<
+  string,
+  string | Blob | PromiseLike<string | Blob>
+>;
+
+class MockClipboardItem {
+  static supports(_type: string): boolean {
+    return true;
+  }
+
+  readonly types: string[];
+  readonly presentationStyle: PresentationStyle;
+
+  constructor(
+    private readonly data: MockClipboardItemData,
+    _options?: ClipboardItemOptions,
+  ) {
+    this.types = Object.keys(data);
+    this.presentationStyle = "unspecified";
+  }
+
+  async getType(type: string): Promise<Blob> {
+    const value = this.data[type];
+    if (!value) {
+      throw new Error(`Clipboard item type not found: ${type}`);
+    }
+    const resolved = await value;
+    return typeof resolved === "string" ? new Blob([resolved]) : resolved;
+  }
+}
+
 describe("wechatCopyService clipboard strategy", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -94,9 +125,7 @@ describe("wechatCopyService clipboard strategy", () => {
 
     (
       window as unknown as { ClipboardItem: typeof ClipboardItem }
-    ).ClipboardItem = class ClipboardItem {
-      constructor(public data: Record<string, Blob>) {}
-    };
+    ).ClipboardItem = MockClipboardItem as unknown as typeof ClipboardItem;
     (
       globalThis as unknown as { ClipboardItem: typeof ClipboardItem }
     ).ClipboardItem = (
@@ -216,9 +245,9 @@ describe("wechatCopyService clipboard strategy", () => {
 
     expect(mocked.clipboardWrite).toHaveBeenCalledTimes(1);
     const [[items]] = mocked.clipboardWrite.mock.calls;
-    const clipboardItem = items[0] as { data: Record<string, Blob> };
-    const plainBlob = clipboardItem.data["text/plain"];
-    const htmlBlob = clipboardItem.data["text/html"];
+    const clipboardItem = items[0] as MockClipboardItem;
+    const plainBlob = await clipboardItem.getType("text/plain");
+    const htmlBlob = await clipboardItem.getType("text/html");
     const expectedRenderedPlainText = "段落A段落B";
 
     expect(plainBlob).toBeTruthy();
