@@ -188,6 +188,26 @@ const copyViaNativeExecCommand = (container: HTMLElement): boolean => {
   }
 };
 
+const getRenderedPlainText = (container: HTMLElement): string => {
+  const innerText = container.innerText;
+  if (typeof innerText === "string" && innerText.trim().length > 0) {
+    return innerText;
+  }
+  return container.textContent || "";
+};
+
+const copyViaElectronClipboard = async (
+  container: HTMLElement,
+): Promise<{ success: boolean; error?: string } | null> => {
+  const writeHTML = window.electron?.clipboard?.writeHTML;
+  if (!writeHTML) return null;
+
+  return writeHTML({
+    html: container.innerHTML,
+    text: getRenderedPlainText(container),
+  });
+};
+
 let mermaidInitialized = false;
 
 const ensureMermaidInitialized = () => {
@@ -367,7 +387,28 @@ export async function copyToWechat(
 
     await renderMermaidBlocks(container);
 
-    let copied = copyViaNativeExecCommand(container);
+    let copied = false;
+
+    if (window.electron?.isElectron) {
+      try {
+        const electronResult = await copyViaElectronClipboard(container);
+        if (electronResult) {
+          copied = electronResult.success;
+          if (!electronResult.success) {
+            console.warn(
+              "[WeMD] Electron clipboard bridge unavailable, fallback to browser copy chain",
+              electronResult.error || "unknown error",
+            );
+          }
+        }
+      } catch (e) {
+        console.error("Electron clipboard 写入失败，降级为浏览器复制链路", e);
+      }
+    }
+
+    if (!copied) {
+      copied = copyViaNativeExecCommand(container);
+    }
 
     // 最后回退到 Clipboard API
     if (!copied && navigator.clipboard && window.ClipboardItem) {
@@ -376,7 +417,9 @@ export async function copyToWechat(
       );
       try {
         const blob = new Blob([container.innerHTML], { type: "text/html" });
-        const textBlob = new Blob([markdown], { type: "text/plain" });
+        const textBlob = new Blob([getRenderedPlainText(container)], {
+          type: "text/plain",
+        });
         await navigator.clipboard.write([
           new ClipboardItem({
             "text/html": blob,

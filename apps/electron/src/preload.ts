@@ -98,5 +98,9 @@ contextBridge.exposeInMainWorld('electron', {
 
     shell: {
         openExternal: (url: string) => ipcRenderer.invoke('shell:openExternal', url),
-    }
+    },
+    clipboard: {
+        writeHTML: (payload: { html: string; text: string }) =>
+            ipcRenderer.invoke('clipboard:writeHTML', payload),
+    },
 });

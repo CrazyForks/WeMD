@@ -6,6 +6,7 @@ const mocked = vi.hoisted(() => ({
   parserRender: vi.fn(),
   processHtmlMock: vi.fn(),
   clipboardWrite: vi.fn(),
+  electronClipboardWrite: vi.fn(),
 }));
 
 vi.mock("react-hot-toast", () => ({
@@ -96,6 +97,11 @@ describe("wechatCopyService clipboard strategy", () => {
     ).ClipboardItem = class ClipboardItem {
       constructor(public data: Record<string, Blob>) {}
     };
+    (
+      globalThis as unknown as { ClipboardItem: typeof ClipboardItem }
+    ).ClipboardItem = (
+      window as unknown as { ClipboardItem: typeof ClipboardItem }
+    ).ClipboardItem;
 
     const doc = document as unknown as {
       execCommand?: (command: string) => boolean;
@@ -103,6 +109,11 @@ describe("wechatCopyService clipboard strategy", () => {
     if (!doc.execCommand) {
       doc.execCommand = () => true;
     }
+
+    Object.defineProperty(window, "electron", {
+      configurable: true,
+      value: undefined,
+    });
   });
 
   it("prefers native execCommand copy", async () => {
@@ -116,6 +127,77 @@ describe("wechatCopyService clipboard strategy", () => {
     expect(mocked.toastError).not.toHaveBeenCalled();
   });
 
+  it("prefers electron clipboard bridge in electron runtime", async () => {
+    Object.defineProperty(window, "electron", {
+      configurable: true,
+      value: {
+        isElectron: true,
+        clipboard: {
+          writeHTML: mocked.electronClipboardWrite.mockResolvedValue({
+            success: true,
+          }),
+        },
+      },
+    });
+    const execSpy = vi.spyOn(document, "execCommand").mockReturnValue(true);
+
+    await copyToWechat("test", "#wemd p { margin: 18px 0; }");
+
+    expect(mocked.electronClipboardWrite).toHaveBeenCalledTimes(1);
+    expect(execSpy).not.toHaveBeenCalled();
+    expect(mocked.clipboardWrite).not.toHaveBeenCalled();
+    expect(mocked.toastSuccess).toHaveBeenCalled();
+    expect(mocked.toastError).not.toHaveBeenCalled();
+  });
+
+  it("falls back to native execCommand when electron bridge returns failure", async () => {
+    Object.defineProperty(window, "electron", {
+      configurable: true,
+      value: {
+        isElectron: true,
+        clipboard: {
+          writeHTML: mocked.electronClipboardWrite.mockResolvedValue({
+            success: false,
+            error: "bridge failed",
+          }),
+        },
+      },
+    });
+    const execSpy = vi.spyOn(document, "execCommand").mockReturnValue(true);
+
+    await copyToWechat("test", "#wemd p { margin: 18px 0; }");
+
+    expect(mocked.electronClipboardWrite).toHaveBeenCalledTimes(1);
+    expect(execSpy).toHaveBeenCalledWith("copy");
+    expect(mocked.clipboardWrite).not.toHaveBeenCalled();
+    expect(mocked.toastSuccess).toHaveBeenCalled();
+    expect(mocked.toastError).not.toHaveBeenCalled();
+  });
+
+  it("falls back to Clipboard API when electron bridge and execCommand both fail", async () => {
+    Object.defineProperty(window, "electron", {
+      configurable: true,
+      value: {
+        isElectron: true,
+        clipboard: {
+          writeHTML: mocked.electronClipboardWrite.mockResolvedValue({
+            success: false,
+            error: "bridge failed",
+          }),
+        },
+      },
+    });
+    const execSpy = vi.spyOn(document, "execCommand").mockReturnValue(false);
+
+    await copyToWechat("test", "#wemd p { margin: 18px 0; }");
+
+    expect(mocked.electronClipboardWrite).toHaveBeenCalledTimes(1);
+    expect(execSpy).toHaveBeenCalledWith("copy");
+    expect(mocked.clipboardWrite).toHaveBeenCalledTimes(1);
+    expect(mocked.toastSuccess).toHaveBeenCalled();
+    expect(mocked.toastError).not.toHaveBeenCalled();
+  });
+
   it("falls back to Clipboard API when native execCommand fails", async () => {
     const execSpy = vi.spyOn(document, "execCommand").mockReturnValue(false);
 
@@ -125,6 +207,25 @@ describe("wechatCopyService clipboard strategy", () => {
     expect(mocked.clipboardWrite).toHaveBeenCalledTimes(1);
     expect(mocked.toastSuccess).toHaveBeenCalled();
     expect(mocked.toastError).not.toHaveBeenCalled();
+  });
+
+  it("uses rendered plain text instead of raw markdown in Clipboard fallback", async () => {
+    vi.spyOn(document, "execCommand").mockReturnValue(false);
+
+    await copyToWechat("# 标题", "#wemd p { margin: 18px 0; }");
+
+    expect(mocked.clipboardWrite).toHaveBeenCalledTimes(1);
+    const [[items]] = mocked.clipboardWrite.mock.calls;
+    const clipboardItem = items[0] as { data: Record<string, Blob> };
+    const plainBlob = clipboardItem.data["text/plain"];
+    const htmlBlob = clipboardItem.data["text/html"];
+    const expectedRenderedPlainText = "段落A段落B";
+
+    expect(plainBlob).toBeTruthy();
+    expect(htmlBlob).toBeTruthy();
+    expect(plainBlob.size).toBe(new Blob([expectedRenderedPlainText]).size);
+    expect(plainBlob.size).not.toBe(new Blob(["# 标题"]).size);
+    expect(htmlBlob.size).toBeGreaterThan(plainBlob.size);
   });
 
   it("strips only copy metadata from copied container", () => {

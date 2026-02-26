@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, dialog, ipcMain, nativeImage, IpcMainInvokeEvent, shell } from 'electron';
+import { app, BrowserWindow, Menu, dialog, ipcMain, nativeImage, IpcMainInvokeEvent, shell, clipboard } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import { checkForUpdates, openReleasesPage } from './updater';
@@ -682,6 +682,26 @@ ipcMain.handle('shell:openExternal', async (_event: IpcMainInvokeEvent, url: str
         await shell.openExternal(url);
     }
 });
+
+ipcMain.handle(
+    'clipboard:writeHTML',
+    async (
+        _event: IpcMainInvokeEvent,
+        payload: { html?: string; text?: string }
+    ) => {
+        const html = payload?.html ?? '';
+        const text = payload?.text ?? '';
+        if (!html.trim()) {
+            return { success: false, error: 'HTML 不能为空' };
+        }
+        try {
+            clipboard.write({ html, text });
+            return { success: true };
+        } catch (error: any) {
+            return { success: false, error: error?.message ?? '写入剪贴板失败' };
+        }
+    }
+);
 
 // 更新相关
 ipcMain.handle('update:openReleases', () => {

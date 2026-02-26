@@ -74,6 +74,12 @@ interface ElectronAPI {
   shell?: {
     openExternal: (url: string) => Promise<void>;
   };
+  clipboard?: {
+    writeHTML: (payload: {
+      html: string;
+      text: string;
+    }) => Promise<{ success: boolean; error?: string }>;
+  };
 }
 
 declare global {
