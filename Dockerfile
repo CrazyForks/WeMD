@@ -1,5 +1,5 @@
 # 构建阶段
-FROM node:22-alpine AS builder
+FROM node:22-bookworm-slim AS builder
 
 WORKDIR /build
 
@@ -8,10 +8,11 @@ COPY pnpm-lock.yaml pnpm-workspace.yaml package.json turbo.json ./
 COPY packages/ ./packages/
 COPY apps/web/ ./apps/web/
 
-# 安装 pnpm 并构建
-RUN npm install -g pnpm@latest && \
+# 使用与仓库一致的 pnpm 版本，避免 latest 带来不兼容
+RUN corepack enable && \
+    corepack prepare pnpm@9.0.2 --activate && \
     pnpm install --frozen-lockfile && \
-    pnpm --filter @wemd/web build
+    pnpm --filter @wemd/web run build
 
 # 运行阶段 - 使用 nginx 提供静态文件服务
 FROM nginx:alpine
