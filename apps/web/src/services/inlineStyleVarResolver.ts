@@ -170,16 +170,35 @@ const resolveVarFunctions = (
     if (variableName.startsWith("--")) {
       const variableValue = resolveVariable(variableName, stack);
       if (variableValue !== null) {
-        replacement = resolveVarFunctions(
+        const nextStack = new Set(stack);
+        nextStack.add(variableName);
+        const resolvedVariableValue = resolveVarFunctions(
           variableValue,
           resolveVariable,
-          stack,
+          nextStack,
         );
+        if (fallback && hasResolvableVarFunction(resolvedVariableValue)) {
+          replacement = resolveVarFunctions(
+            fallback,
+            resolveVariable,
+            new Set(stack),
+          );
+        } else {
+          replacement = resolvedVariableValue;
+        }
       } else if (fallback) {
-        replacement = resolveVarFunctions(fallback, resolveVariable, stack);
+        replacement = resolveVarFunctions(
+          fallback,
+          resolveVariable,
+          new Set(stack),
+        );
       }
     } else if (fallback) {
-      replacement = resolveVarFunctions(fallback, resolveVariable, stack);
+      replacement = resolveVarFunctions(
+        fallback,
+        resolveVariable,
+        new Set(stack),
+      );
     }
 
     output += replacement ?? unresolved;
@@ -193,6 +212,14 @@ const resolveElementTreeVars = (
   element: HTMLElement,
   inheritedCustomVars: Map<string, string>,
 ) => {
+  let computedStyle: CSSStyleDeclaration | null = null;
+  const getComputedStyleForElement = (): CSSStyleDeclaration => {
+    if (!computedStyle) {
+      computedStyle = window.getComputedStyle(element);
+    }
+    return computedStyle;
+  };
+
   const declarations = Array.from(
     { length: element.style.length },
     (_, index) => element.style.item(index),
@@ -203,6 +230,16 @@ const resolveElementTreeVars = (
       value: element.style.getPropertyValue(name),
       priority: element.style.getPropertyPriority(name),
     }));
+
+  if (declarations.length === 0) {
+    const children = Array.from(element.children).filter(
+      (child): child is HTMLElement => child instanceof HTMLElement,
+    );
+    children.forEach((child) =>
+      resolveElementTreeVars(child, inheritedCustomVars),
+    );
+    return;
+  }
 
   const localCustomRaw = new Map<string, string>();
   declarations.forEach(({ name, value }) => {
@@ -247,11 +284,27 @@ const resolveElementTreeVars = (
 
   declarations.forEach(({ name, value, priority }) => {
     if (name.startsWith("--") || !hasResolvableVarFunction(value)) return;
+    const computedValue = getComputedStyleForElement()
+      .getPropertyValue(name)
+      .trim();
+    if (computedValue && !hasResolvableVarFunction(computedValue)) {
+      element.style.setProperty(name, computedValue, priority);
+      return;
+    }
+
     const resolved = resolveVarFunctions(
       value,
       (varName, stack) => {
         if (stack.has(varName)) return null;
-        if (!currentCustomVars.has(varName)) return null;
+
+        if (!currentCustomVars.has(varName)) {
+          const computedVarValue = getComputedStyleForElement()
+            .getPropertyValue(varName)
+            .trim();
+          if (!computedVarValue) return null;
+          return computedVarValue;
+        }
+
         stack.add(varName);
         const varValue = currentCustomVars.get(varName) || "";
         const varResolved = resolveVarFunctions(
@@ -269,6 +322,17 @@ const resolveElementTreeVars = (
     );
     element.style.setProperty(name, resolved, priority);
   });
+
+  // 微信编辑器对 CSS 变量支持不稳定，复制前移除 --token 声明，避免被清洗时连带丢失样式
+  if (localCustomRaw.size > 0) {
+    localCustomRaw.forEach((_value, name) => {
+      element.style.removeProperty(name);
+    });
+  }
+
+  if (element.style.length === 0 && element.hasAttribute("style")) {
+    element.removeAttribute("style");
+  }
 
   // 微信对 margin 简写兼容不稳定，段落额外写入长属性兜底间距
   if (element.tagName === "P") {
