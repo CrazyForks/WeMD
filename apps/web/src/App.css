@@ -13,9 +13,7 @@
   grid-template-columns: var(--history-width, 280px) minmax(0, 1fr);
   gap: var(--spacing-xl);
   padding: var(--spacing-xl) var(--spacing-xxl);
-  max-width: 1600px;
   width: 100%;
-  margin: 0 auto;
   box-sizing: border-box;
   overflow: hidden;
   transition:
