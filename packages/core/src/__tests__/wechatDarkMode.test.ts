@@ -126,10 +126,55 @@ describe("convertCssToWeChatDarkMode", () => {
     expect(result).toContain("var(--text-color)");
   });
 
-  it("跳过 gradient 值", () => {
+  it("转换 gradient 内的颜色值", () => {
     const css = "div { background: linear-gradient(#fff, #000); }";
     const result = convertCssToWeChatDarkMode(css);
+    // 渐变结构保留
     expect(result).toContain("linear-gradient");
+    // 原始颜色应被转换
+    expect(result).not.toContain("#fff");
+    expect(result).not.toContain("#000");
+  });
+
+  it("转换 gradient 内的近白色背景", () => {
+    const css =
+      "#wemd h2 { background: linear-gradient(90deg, #f0f4ff 0%, #ffffff 100%); }";
+    const result = convertCssToWeChatDarkMode(css);
+    expect(result).toContain("linear-gradient");
+    expect(result).not.toContain("#f0f4ff");
+    expect(result).not.toContain("#ffffff");
+  });
+
+  it("gradient 内保留 alpha hex 后缀", () => {
+    const css = "div { background: linear-gradient(#ffffff00, #ffffff80); }";
+    const result = convertCssToWeChatDarkMode(css);
+    // 应保留两个 stop 的 alpha 通道（8位 hex 格式）
+    expect(result).toMatch(/#[0-9a-f]{6}00/i);
+    expect(result).toMatch(/#[0-9a-f]{6}80/i);
+  });
+
+  it("近白色彩色背景暗化后保留色调", () => {
+    // callout 浅色背景 perceived > 235 但有色相，暗化后应保留色调差异
+    const noteResult = convertToWeChatDarkMode("#f7f9ff", "background");
+    const warningResult = convertToWeChatDarkMode("#fff8ed", "background");
+    // 两种 callout 背景暗化结果应不同（保留各自色调）
+    expect(noteResult).not.toBe(warningResult);
+    // 不应变成纯灰（R≈G≈B）
+    const r = parseInt(noteResult.slice(1, 3), 16);
+    const g = parseInt(noteResult.slice(3, 5), 16);
+    const b = parseInt(noteResult.slice(5, 7), 16);
+    expect(Math.max(r, g, b) - Math.min(r, g, b)).toBeGreaterThan(0);
+  });
+
+  it("NEAR_WHITE_PERCEIVED 边界：233 不走近白分支，236 走近白分支", () => {
+    // perceived ≈ 233 → 保持彩色路径，走 adjustBrightnessTo(190)
+    const below = convertToWeChatDarkMode("#dfeaff", "background"); // perceived ≈ 233.1
+    // perceived ≈ 236 → 命中近白分支，走暗化保留色调逻辑
+    const above = convertToWeChatDarkMode("#e3edff", "background"); // perceived ≈ 236.1
+    const belowR = parseInt(below.slice(1, 3), 16);
+    const aboveR = parseInt(above.slice(1, 3), 16);
+    // 阈值以下的结果应明显亮于阈值以上的近白暗化结果
+    expect(belowR).toBeGreaterThan(aboveR);
   });
 
   it("处理 @media 规则", () => {
