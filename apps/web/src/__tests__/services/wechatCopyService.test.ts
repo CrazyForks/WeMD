@@ -4,6 +4,7 @@ const mocked = vi.hoisted(() => ({
   toastSuccess: vi.fn(),
   toastError: vi.fn(),
   parserRender: vi.fn(),
+  createMarkdownParserMock: vi.fn(),
   processHtmlMock: vi.fn(),
   clipboardWrite: vi.fn(),
   electronClipboardWrite: vi.fn(),
@@ -29,9 +30,11 @@ vi.mock("mermaid", () => ({
 }));
 
 vi.mock("@wemd/core", () => ({
-  createMarkdownParser: () => ({
-    render: mocked.parserRender,
-  }),
+  createMarkdownParser: mocked.createMarkdownParserMock.mockImplementation(
+    () => ({
+      render: mocked.parserRender,
+    }),
+  ),
   processHtml: mocked.processHtmlMock,
 }));
 
@@ -116,6 +119,9 @@ class MockClipboardItem {
 describe("wechatCopyService clipboard strategy", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocked.createMarkdownParserMock.mockImplementation(() => ({
+      render: mocked.parserRender,
+    }));
 
     mocked.parserRender.mockReturnValue("<p>段落A</p><p>段落B</p>");
     mocked.processHtmlMock.mockReturnValue(
@@ -148,6 +154,34 @@ describe("wechatCopyService clipboard strategy", () => {
     Object.defineProperty(window, "electron", {
       configurable: true,
       value: undefined,
+    });
+
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
+      scale: vi.fn(),
+      drawImage: vi.fn(),
+    } as unknown as CanvasRenderingContext2D);
+    vi.spyOn(HTMLCanvasElement.prototype, "toDataURL").mockReturnValue(
+      "data:image/png;base64,test",
+    );
+
+    class MockImage {
+      onload: null | (() => void) = null;
+      onerror: null | (() => void) = null;
+
+      set src(_value: string) {
+        queueMicrotask(() => {
+          this.onload?.();
+        });
+      }
+    }
+
+    Object.defineProperty(window, "Image", {
+      configurable: true,
+      value: MockImage,
+    });
+    Object.defineProperty(globalThis, "Image", {
+      configurable: true,
+      value: MockImage,
     });
   });
 
@@ -354,5 +388,92 @@ describe("wechatCopyService clipboard strategy", () => {
 
     expect(mermaidParagraph).toBeTruthy();
     expect(mermaidParagraph?.style.color).toBe("rgb(26, 26, 26)");
+  });
+
+  it("converts mac-sign svg to img before clipboard write", async () => {
+    mocked.processHtmlMock.mockReturnValue(
+      '<section id="wemd"><pre class="custom"><span class="mac-sign" style="padding: 10px 14px 0;"><svg xmlns="http://www.w3.org/2000/svg" width="45" height="13" viewBox="0 0 450 130"></svg></span><code class="hljs">const a = 1;</code></pre></section>',
+    );
+
+    Object.defineProperty(window, "electron", {
+      configurable: true,
+      value: {
+        isElectron: true,
+        platform: "darwin",
+        clipboard: {
+          writeHTML: mocked.electronClipboardWrite.mockResolvedValue({
+            success: true,
+          }),
+        },
+      },
+    });
+
+    await copyToWechat(
+      "test",
+      "#wemd pre.custom > .mac-sign { display: block; }",
+      { showMacBar: true },
+    );
+
+    expect(mocked.createMarkdownParserMock).toHaveBeenCalledWith({
+      showMacBar: true,
+    });
+    const [payload] = mocked.electronClipboardWrite.mock.calls[0] as [
+      { html: string; text: string },
+    ];
+    expect(payload.html).toContain("<img");
+    expect(payload.html).not.toContain("<svg");
+    expect(payload.html).toContain("data:image/png;base64,test");
+  });
+
+  it("falls back to original svg when mac-sign png conversion fails", async () => {
+    mocked.processHtmlMock.mockReturnValue(
+      '<section id="wemd"><pre class="custom"><span class="mac-sign" style="padding: 10px 14px 0;"><svg xmlns="http://www.w3.org/2000/svg" width="45" height="13" viewBox="0 0 450 130"></svg></span><code class="hljs">const a = 1;</code></pre></section>',
+    );
+
+    class BrokenImage {
+      onload: null | (() => void) = null;
+      onerror: null | (() => void) = null;
+
+      set src(_value: string) {
+        queueMicrotask(() => {
+          this.onerror?.();
+        });
+      }
+    }
+
+    Object.defineProperty(window, "Image", {
+      configurable: true,
+      value: BrokenImage,
+    });
+    Object.defineProperty(globalThis, "Image", {
+      configurable: true,
+      value: BrokenImage,
+    });
+
+    Object.defineProperty(window, "electron", {
+      configurable: true,
+      value: {
+        isElectron: true,
+        platform: "darwin",
+        clipboard: {
+          writeHTML: mocked.electronClipboardWrite.mockResolvedValue({
+            success: true,
+          }),
+        },
+      },
+    });
+
+    await copyToWechat(
+      "test",
+      "#wemd pre.custom > .mac-sign { display: block; }",
+      { showMacBar: true },
+    );
+
+    const [payload] = mocked.electronClipboardWrite.mock.calls[0] as [
+      { html: string; text: string },
+    ];
+    expect(payload.html).toContain("<svg");
+    expect(payload.html).not.toContain("data:image/png;base64,test");
+    expect(mocked.toastSuccess).toHaveBeenCalled();
   });
 });

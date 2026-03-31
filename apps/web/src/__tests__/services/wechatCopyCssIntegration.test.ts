@@ -287,4 +287,86 @@ describe("wechat copy css integration", () => {
     expect(calloutTitle).toBeTruthy();
     expect(calloutTitle.style.color).toBe("rgb(26, 26, 26)");
   });
+
+  it("keeps mac bar svg outside code in copy pipeline", () => {
+    const html =
+      '<pre class="custom"><span class="mac-sign" style="padding: 10px 14px 0;"><svg xmlns="http://www.w3.org/2000/svg" width="45" height="13" viewBox="0 0 450 130"></svg></span><code class="hljs language-ts">  const a = 1;\n    console.log(a);</code></pre>';
+    const css = `
+      #wemd pre.custom > .mac-sign {
+        display: block;
+      }
+    `;
+
+    const output = resolveInlineStyleVariablesForCopy(
+      processHtml(html, css, true, true),
+    );
+
+    const container = document.createElement("div");
+    container.innerHTML = output;
+    normalizeCopyContainer(container);
+
+    const pre = container.querySelector("pre") as HTMLElement | null;
+    const svg = container.querySelector("pre > span > svg");
+    const code = container.querySelector("pre > code");
+
+    expect(pre).toBeTruthy();
+    expect(svg).toBeTruthy();
+    expect(code).toBeTruthy();
+    expect(code!.querySelector("svg")).toBeNull();
+
+    const preChildren = Array.from(pre!.children).map((el) => el.tagName);
+    expect(preChildren[0]).toBe("SPAN");
+    expect(preChildren[1]).toBe("CODE");
+  });
+
+  it("does not add extra top padding to code when mac bar is enabled", () => {
+    const html =
+      "<pre class='custom'><code class='hljs language-ts'>const a = 1;</code></pre>";
+    const css = generateCSS({
+      ...defaultVariables,
+      showMacBar: true,
+    });
+
+    const output = resolveInlineStyleVariablesForCopy(
+      processHtml(html, css, true, true),
+    );
+
+    const container = document.createElement("div");
+    container.innerHTML = output;
+    normalizeCopyContainer(container);
+
+    const code = container.querySelector("pre > code") as HTMLElement | null;
+    expect(code).toBeTruthy();
+    expect(code!.style.paddingTop).toBe("16px");
+    expect(code!.style.paddingRight).toBe("16px");
+    expect(code!.style.paddingBottom).toBe("16px");
+    expect(code!.style.paddingLeft).toBe("16px");
+  });
+
+  it("uses pre background instead of code background for mac bar layout", () => {
+    const html =
+      "<pre class='custom'><code class='hljs language-ts'>const a = 1;</code></pre>";
+    const css = generateCSS({
+      ...defaultVariables,
+      showMacBar: true,
+      codeBackground: "#f5f5f5",
+    });
+
+    const output = resolveInlineStyleVariablesForCopy(
+      processHtml(html, css, true, true),
+    );
+
+    const container = document.createElement("div");
+    container.innerHTML = output;
+    normalizeCopyContainer(container);
+
+    const pre = container.querySelector("pre.custom") as HTMLElement | null;
+    const code = container.querySelector("pre > code") as HTMLElement | null;
+    expect(pre).toBeTruthy();
+    expect(code).toBeTruthy();
+    expect(pre!.style.background).toBe("rgb(245, 245, 245)");
+    expect(pre!.style.borderRadius).toBe("8px");
+    expect(code!.style.background).toBe("transparent");
+    expect(code!.style.borderRadius).toBe("0");
+  });
 });
