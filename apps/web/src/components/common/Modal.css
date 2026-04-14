@@ -56,3 +56,11 @@
   flex-direction: column;
   overflow: hidden;
 }
+
+.modal-panel.modal-narrow .modal-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}

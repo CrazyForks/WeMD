@@ -19,6 +19,7 @@ import {
   Layers,
   Palette,
   Send,
+  Code,
   ImageIcon,
   Sun,
   Moon,
@@ -110,7 +111,7 @@ const WindowControls = ({ fixed = false }: { fixed?: boolean }) => {
 };
 
 export function Header() {
-  const { copyToWechat } = useEditorStore();
+  const { copyToWechat, copyAsHtml } = useEditorStore();
   const [showThemePanel, setShowThemePanel] = useState(false);
   const [showStorageModal, setShowStorageModal] = useState(false);
   const [showImageHostModal, setShowImageHostModal] = useState(false);
@@ -194,6 +195,11 @@ export function Header() {
             onClick={() => setShowThemePanel(true)}
           />
           <FloatingToolbarButton
+            icon={<Code size={18} strokeWidth={2} />}
+            label="复制 HTML"
+            onClick={copyAsHtml}
+          />
+          <FloatingToolbarButton
             icon={<Send size={18} strokeWidth={2} />}
             label="复制到公众号"
             onClick={copyToWechat}
@@ -258,6 +264,11 @@ export function Header() {
             >
               <Palette size={18} strokeWidth={2} />
               <span>主题管理</span>
+            </button>
+
+            <button className="btn-secondary" onClick={copyAsHtml}>
+              <Code size={18} strokeWidth={2} />
+              <span>复制 HTML</span>
             </button>
 
             <button className="btn-primary" onClick={copyToWechat}>

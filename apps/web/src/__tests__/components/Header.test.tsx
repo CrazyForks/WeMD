@@ -29,6 +29,7 @@ vi.mock("../../components/Settings/ImageHostSettings", () => ({
 describe("Header", () => {
   // Default mocks
   const mockCopyToWechat = vi.fn();
+  const mockCopyAsHtml = vi.fn();
   const mockSetTheme = vi.fn();
   const mockMinimize = vi.fn();
   const mockMaximize = vi.fn();
@@ -76,6 +77,7 @@ describe("Header", () => {
     // Setup default hook returns
     vi.mocked(useEditorStore).mockReturnValue({
       copyToWechat: mockCopyToWechat,
+      copyAsHtml: mockCopyAsHtml,
     });
 
     vi.mocked(useUITheme).mockImplementation(
@@ -121,6 +123,13 @@ describe("Header", () => {
 
     fireEvent.click(screen.getByText("复制到公众号"));
     expect(mockCopyToWechat).toHaveBeenCalled();
+  });
+
+  it("calls copyAsHtml action", () => {
+    render(<Header />);
+
+    fireEvent.click(screen.getByText("复制 HTML"));
+    expect(mockCopyAsHtml).toHaveBeenCalled();
   });
 
   it("does not render window controls on Web/Mac", () => {

@@ -1,4 +1,12 @@
-import { Pencil, Eye, Copy, MoreHorizontal, Palette, X } from "lucide-react";
+import {
+  Pencil,
+  Eye,
+  Copy,
+  MoreHorizontal,
+  Palette,
+  Code,
+  X,
+} from "lucide-react";
 import { useState } from "react";
 import type { MobileViewType } from "../../hooks/useMobileView";
 import "./MobileToolbar.css";
@@ -7,6 +15,7 @@ interface MobileToolbarProps {
   activeView: MobileViewType;
   onViewChange: (view: MobileViewType) => void;
   onCopyToWechat: () => void;
+  onCopyAsHtml: () => void;
   onOpenTheme: () => void;
 }
 
@@ -17,6 +26,7 @@ export function MobileToolbar({
   activeView,
   onViewChange,
   onCopyToWechat,
+  onCopyAsHtml,
   onOpenTheme,
 }: MobileToolbarProps) {
   const [showMenu, setShowMenu] = useState(false);
@@ -40,6 +50,16 @@ export function MobileToolbar({
               </button>
             </div>
             <div className="mobile-menu-list">
+              <button
+                className="mobile-menu-item"
+                onClick={() => {
+                  onCopyAsHtml();
+                  setShowMenu(false);
+                }}
+              >
+                <Code size={20} />
+                <span>复制 HTML</span>
+              </button>
               <button
                 className="mobile-menu-item"
                 onClick={() => {

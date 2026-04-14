@@ -102,5 +102,6 @@ contextBridge.exposeInMainWorld('electron', {
     clipboard: {
         writeHTML: (payload: { html: string; text: string }) =>
             ipcRenderer.invoke('clipboard:writeHTML', payload),
+        writeText: (text: string) => ipcRenderer.invoke('clipboard:writeText', text),
     },
 });

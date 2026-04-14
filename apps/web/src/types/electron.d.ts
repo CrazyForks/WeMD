@@ -79,6 +79,7 @@ interface ElectronAPI {
       html: string;
       text: string;
     }) => Promise<{ success: boolean; error?: string }>;
+    writeText: (text: string) => Promise<{ success: boolean; error?: string }>;
   };
 }
 

@@ -2,6 +2,7 @@
 import { create } from "zustand";
 import { useThemeStore } from "./themeStore";
 import { copyToWechat as execCopyToWechat } from "../services/wechatCopyService";
+import { copyAsHtml as execCopyAsHtml } from "../services/htmlCopyService";
 
 export interface ResetOptions {
   markdown?: string;
@@ -26,6 +27,7 @@ interface EditorStore {
 
   resetDocument: (options?: ResetOptions) => void;
   copyToWechat: () => void;
+  copyAsHtml: () => void;
 }
 
 export const defaultMarkdown = `# 欢迎使用 WeMD
@@ -191,5 +193,10 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     } catch (error) {
       console.error("复制失败:", error);
     }
+  },
+
+  copyAsHtml: async () => {
+    const { markdown } = get();
+    await execCopyAsHtml(markdown);
   },
 }));

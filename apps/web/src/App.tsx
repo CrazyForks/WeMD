@@ -67,6 +67,7 @@ function App() {
   } = useMobileView();
   const isMobile = isMobileScreen && !platform.isElectron;
   const copyToWechat = useEditorStore((state) => state.copyToWechat);
+  const copyAsHtml = useEditorStore((state) => state.copyAsHtml);
   const [showThemePanel, setShowThemePanel] = useState(false);
 
   // 全局保存快捷键（统一监听器）
@@ -329,6 +330,7 @@ function App() {
               activeView={activeView}
               onViewChange={setActiveView}
               onCopyToWechat={copyToWechat}
+              onCopyAsHtml={copyAsHtml}
               onOpenTheme={() => setShowThemePanel(true)}
             />
           )}

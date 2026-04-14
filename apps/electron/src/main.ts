@@ -683,6 +683,18 @@ ipcMain.handle(
     }
 );
 
+ipcMain.handle('clipboard:writeText', async (_event: IpcMainInvokeEvent, text: string) => {
+    if (!text?.trim()) {
+        return { success: false, error: '文本不能为空' };
+    }
+    try {
+        clipboard.writeText(text);
+        return { success: true };
+    } catch (error: any) {
+        return { success: false, error: error?.message ?? '写入剪贴板失败' };
+    }
+});
+
 // 更新相关
 ipcMain.handle('update:openReleases', () => {
     openReleasesPage();
