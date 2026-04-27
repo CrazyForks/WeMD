@@ -27,16 +27,18 @@ export interface MermaidConfig {
  */
 export const getMermaidConfig = (
   designerVariables?: DesignerVariables,
+  options?: { htmlLabels?: boolean },
 ): MermaidConfig => {
   const mermaidTheme = (designerVariables?.mermaidTheme as string) || "base";
   const mermaidFontFamily =
     designerVariables?.fontFamily ||
     '-apple-system, BlinkMacSystemFont, "Microsoft YaHei", sans-serif';
+  const htmlLabels = options?.htmlLabels ?? true;
 
   return {
     theme: mermaidTheme,
     flowchart: {
-      htmlLabels: true,
+      htmlLabels,
       padding: 20,
       nodeSpacing: 50,
       rankSpacing: 50,

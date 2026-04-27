@@ -176,9 +176,14 @@ export async function copyToWechat(
   options: CopyToWechatOptions = {},
 ): Promise<void> {
   const container = document.createElement("div");
-  container.style.position = "absolute";
-  container.style.top = "-9999px";
-  container.style.left = "-9999px";
+  container.style.position = "fixed";
+  container.style.top = "0";
+  container.style.left = "0";
+  container.style.width = "760px";
+  container.style.opacity = "0";
+  container.style.pointerEvents = "none";
+  container.style.zIndex = "-1";
+  container.style.contain = "layout style paint";
   // 强制亮色模式，防止暗色 UI 下 execCommand("copy") 序列化出亮色文字
   container.style.colorScheme = "light";
   container.style.color = "#000000";
