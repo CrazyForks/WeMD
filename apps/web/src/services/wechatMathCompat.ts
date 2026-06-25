@@ -5,12 +5,17 @@ import { loadMathJax } from "../utils/mathJaxLoader";
 const BOLD_ITALIC_UPPER_A = 0x1d468;
 const BOLD_ITALIC_LOWER_A = 0x1d482;
 
-const IMAGE_SCALE = 2;
+// 微信移动预览可能忽略 img 的 width/style，PNG 兜底必须以目标显示尺寸生成。
+const IMAGE_SCALE = 1;
+// 先用更高分辨率渲染 SVG，再下采样到目标天然尺寸，减少 1x 直接栅格化的发虚。
+const SVG_RASTER_SOURCE_SCALE = 2;
 const EX_TO_PX = 8;
 const EM_TO_PX = 16;
 const MATHJAX_LOAD_TIMEOUT_MS = 4000;
 const IMAGE_LOAD_TIMEOUT_MS = 3000;
+const UPLOADED_IMAGE_LOAD_TIMEOUT_MS = 5000;
 const BOLDSYMBOL_COMMAND = "\\boldsymbol";
+const DEFAULT_FORMULA_IMAGE_BACKGROUND = "#ffffff";
 
 const HIGH_RISK_MATH_PATTERNS = [
   /\\begin\b/,
@@ -25,6 +30,7 @@ interface MathImageRenderResult {
 }
 
 type FormulaImageUploadCache = Map<string, Promise<string>>;
+type FormulaImageFormat = "svg" | "png";
 
 const toMathBoldItalicLatin = (value: string): string => {
   return Array.from(value)
@@ -218,8 +224,24 @@ const loadImageFromDataUrl = async (src: string): Promise<HTMLImageElement> => {
   });
 };
 
-const createFormulaImageCacheKey = (latex: string, display: boolean): string =>
-  `${display ? "block" : "inline"}:${latex}`;
+const waitForImageUrlReadable = async (src: string): Promise<void> => {
+  await withTimeout(
+    new Promise<void>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error("公式图片上传后暂不可访问"));
+      img.src = src;
+    }),
+    UPLOADED_IMAGE_LOAD_TIMEOUT_MS,
+    "公式图片加载超时",
+  );
+};
+
+const createFormulaImageCacheKey = (
+  latex: string,
+  display: boolean,
+  format: FormulaImageFormat,
+): string => `${format}:${display ? "block" : "inline"}:${latex}`;
 
 const hashFormulaKey = (value: string): string => {
   let hash = 0;
@@ -239,6 +261,66 @@ const canvasToPngBlob = async (canvas: HTMLCanvasElement): Promise<Blob> => {
 
   const response = await fetch(canvas.toDataURL("image/png"));
   return response.blob();
+};
+
+const isTransparentColor = (value: string): boolean => {
+  const color = value.trim().toLowerCase();
+  if (!color || color === "transparent") return true;
+
+  const rgbaMatch = color.match(/^rgba?\(([^)]+)\)$/);
+  if (!rgbaMatch) return false;
+
+  const parts = rgbaMatch[1].split(",").map((part) => part.trim());
+  if (parts.length < 4) return false;
+
+  const alpha = Number.parseFloat(parts[3]);
+  return Number.isFinite(alpha) && alpha <= 0;
+};
+
+const resolveFormulaImageBackground = (node: HTMLElement): string => {
+  let current: HTMLElement | null = node;
+
+  while (current && current !== document.body) {
+    const backgroundColor = window.getComputedStyle(current).backgroundColor;
+    if (!isTransparentColor(backgroundColor)) {
+      return backgroundColor;
+    }
+    current = current.parentElement;
+  }
+
+  return DEFAULT_FORMULA_IMAGE_BACKGROUND;
+};
+
+const getSvgViewBoxRect = (
+  svg: SVGElement,
+  fallbackWidth: number,
+  fallbackHeight: number,
+): { x: number; y: number; width: number; height: number } => {
+  const viewBoxParts = (svg.getAttribute("viewBox") || "")
+    .trim()
+    .split(/\s+/)
+    .map((token) => Number.parseFloat(token));
+
+  if (
+    viewBoxParts.length === 4 &&
+    viewBoxParts.every((value) => Number.isFinite(value)) &&
+    viewBoxParts[2] > 0 &&
+    viewBoxParts[3] > 0
+  ) {
+    return {
+      x: viewBoxParts[0],
+      y: viewBoxParts[1],
+      width: viewBoxParts[2],
+      height: viewBoxParts[3],
+    };
+  }
+
+  return {
+    x: 0,
+    y: 0,
+    width: fallbackWidth,
+    height: fallbackHeight,
+  };
 };
 
 const renderMathJaxContainer = (
@@ -270,12 +352,13 @@ const renderMathJaxContainer = (
 
 const renderSvgToPngBlob = async (
   svg: SVGElement,
+  backgroundColor: string,
 ): Promise<{ blob: Blob; width: number; height: number }> => {
   const svgClone = svg.cloneNode(true) as SVGElement;
   const { width, height } = getSvgFallbackSize(svg);
 
-  svgClone.setAttribute("width", String(width));
-  svgClone.setAttribute("height", String(height));
+  svgClone.setAttribute("width", String(width * SVG_RASTER_SOURCE_SCALE));
+  svgClone.setAttribute("height", String(height * SVG_RASTER_SOURCE_SCALE));
   if (!svgClone.getAttribute("xmlns")) {
     svgClone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
   }
@@ -292,6 +375,8 @@ const renderSvgToPngBlob = async (
     throw new Error("公式 PNG 渲染失败");
   }
 
+  ctx.fillStyle = backgroundColor;
+  ctx.fillRect(0, 0, width, height);
   ctx.scale(IMAGE_SCALE, IMAGE_SCALE);
   ctx.drawImage(img, 0, 0, width, height);
 
@@ -302,20 +387,73 @@ const renderSvgToPngBlob = async (
   };
 };
 
+const renderSvgToSvgBlob = (
+  svg: SVGElement,
+  backgroundColor: string,
+): { blob: Blob; width: number; height: number } => {
+  const svgClone = svg.cloneNode(true) as SVGElement;
+  const { width, height } = getSvgFallbackSize(svg);
+  const displayWidth = Math.ceil(width);
+  const displayHeight = Math.ceil(height);
+
+  svgClone.setAttribute("width", String(displayWidth));
+  svgClone.setAttribute("height", String(displayHeight));
+  if (!svgClone.getAttribute("viewBox")) {
+    svgClone.setAttribute("viewBox", `0 0 ${displayWidth} ${displayHeight}`);
+  }
+  if (!svgClone.getAttribute("xmlns")) {
+    svgClone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+  }
+
+  if (!isTransparentColor(backgroundColor)) {
+    const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    const viewBoxRect = getSvgViewBoxRect(
+      svgClone,
+      displayWidth,
+      displayHeight,
+    );
+    rect.setAttribute("x", String(viewBoxRect.x));
+    rect.setAttribute("y", String(viewBoxRect.y));
+    rect.setAttribute("width", String(viewBoxRect.width));
+    rect.setAttribute("height", String(viewBoxRect.height));
+    rect.setAttribute("class", "wemd-formula-bg");
+    rect.setAttribute("fill", backgroundColor);
+    svgClone.insertBefore(rect, svgClone.firstChild);
+  }
+
+  const svgMarkup = new XMLSerializer().serializeToString(svgClone);
+  return {
+    blob: new Blob([svgMarkup], {
+      type: "image/svg+xml;charset=utf-8",
+    }),
+    width,
+    height,
+  };
+};
+
 const uploadFormulaImage = async (
   blob: Blob,
   latex: string,
   display: boolean,
   uploadCache: FormulaImageUploadCache,
+  format: FormulaImageFormat,
 ): Promise<string> => {
-  const key = createFormulaImageCacheKey(latex, display);
+  const key = createFormulaImageCacheKey(latex, display, format);
   const cached = uploadCache.get(key);
   if (cached) return cached;
 
-  const file = new File([blob], `wemd-formula-${hashFormulaKey(key)}.png`, {
-    type: "image/png",
+  const mimeType = format === "svg" ? "image/svg+xml" : "image/png";
+  const file = new File(
+    [blob],
+    `wemd-formula-${hashFormulaKey(key)}.${format}`,
+    {
+      type: mimeType,
+    },
+  );
+  const uploadPromise = uploadEditorImage(file).then(async (result) => {
+    await waitForImageUrlReadable(result.url);
+    return result.url;
   });
-  const uploadPromise = uploadEditorImage(file).then((result) => result.url);
   uploadCache.set(key, uploadPromise);
 
   try {
@@ -326,9 +464,40 @@ const uploadFormulaImage = async (
   }
 };
 
-const renderLatexToPngImage = async (
+const createFormulaImageElement = (
+  imageUrl: string,
+  width: number,
+  height: number,
+  display: boolean,
+): HTMLImageElement => {
+  const img = document.createElement("img");
+  const displayWidth = Math.ceil(width);
+  const displayHeight = Math.ceil(height);
+  img.src = imageUrl;
+  img.alt = "公式";
+  img.width = displayWidth;
+  img.height = displayHeight;
+  img.setAttribute("width", String(displayWidth));
+  img.setAttribute("height", String(displayHeight));
+  img.style.width = `${displayWidth}px`;
+  img.style.height = `${displayHeight}px`;
+  img.style.maxWidth = "100%";
+  img.style.verticalAlign = display ? "middle" : "-0.15em";
+
+  if (display) {
+    img.style.display = "block";
+    img.style.margin = "1em auto";
+  } else {
+    img.style.display = "inline-block";
+  }
+
+  return img;
+};
+
+const renderLatexToFormulaImage = async (
   latex: string,
   display: boolean,
+  sourceNode: HTMLElement,
   uploadCache: FormulaImageUploadCache,
 ): Promise<HTMLImageElement | null> => {
   try {
@@ -342,29 +511,33 @@ const renderLatexToPngImage = async (
     const svg = mathContainer.querySelector("svg");
     if (!svg) return null;
 
-    const { blob, width, height } = await renderSvgToPngBlob(svg);
+    const backgroundColor = resolveFormulaImageBackground(sourceNode);
+    try {
+      const { blob, width, height } = renderSvgToSvgBlob(svg, backgroundColor);
+      const imageUrl = await uploadFormulaImage(
+        blob,
+        latex,
+        display,
+        uploadCache,
+        "svg",
+      );
+      return createFormulaImageElement(imageUrl, width, height, display);
+    } catch (error) {
+      console.warn("复杂公式转远程 SVG 失败，尝试 PNG 兜底", error);
+    }
+
+    const { blob, width, height } = await renderSvgToPngBlob(
+      svg,
+      backgroundColor,
+    );
     const imageUrl = await uploadFormulaImage(
       blob,
       latex,
       display,
       uploadCache,
+      "png",
     );
-    const img = document.createElement("img");
-    img.src = imageUrl;
-    img.alt = "公式";
-    img.style.width = `${width}px`;
-    img.style.height = `${height}px`;
-    img.style.maxWidth = "100%";
-    img.style.verticalAlign = display ? "middle" : "-0.15em";
-
-    if (display) {
-      img.style.display = "block";
-      img.style.margin = "1em auto";
-    } else {
-      img.style.display = "inline-block";
-    }
-
-    return img;
+    return createFormulaImageElement(imageUrl, width, height, display);
   } catch (error) {
     console.warn("复杂公式转远程图片失败，保留 KaTeX HTML", error);
     return null;
@@ -398,21 +571,25 @@ export const renderHighRiskMathAsImages = async (
     console.warn("复杂公式图片化初始化失败，改用 KaTeX HTML 兜底", error);
   }
 
-  for (const node of formulaNodes) {
-    const latex = node.getAttribute("data-latex") || "";
-    const display = node.classList.contains("block-equation");
-    const image = canRenderImages
-      ? await renderLatexToPngImage(latex, display, uploadCache)
-      : null;
-    if (!image) {
-      rerenderFormulaWithSafeKatex(node, latex, display);
-      continue;
-    }
+  const renderResults = await Promise.all(
+    formulaNodes.map(async (node) => {
+      const latex = node.getAttribute("data-latex") || "";
+      const display = node.classList.contains("block-equation");
+      const image = canRenderImages
+        ? await renderLatexToFormulaImage(latex, display, node, uploadCache)
+        : null;
+      if (!image) {
+        rerenderFormulaWithSafeKatex(node, latex, display);
+        return false;
+      }
 
-    node.replaceChildren(image);
-    node.removeAttribute("data-latex");
-    imageCount += 1;
-  }
+      node.replaceChildren(image);
+      node.removeAttribute("data-latex");
+      return true;
+    }),
+  );
+
+  imageCount = renderResults.filter(Boolean).length;
 
   return { imageCount };
 };
