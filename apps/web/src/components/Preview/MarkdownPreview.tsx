@@ -214,7 +214,11 @@ export function MarkdownPreview({ onScrollSyncReady }: MarkdownPreviewProps) {
       position,
     ) => {
       const max = Math.max(0, container.scrollHeight - container.clientHeight);
-      if (position.sourceLine === null || position.ratio >= 0.999) {
+      if (
+        position.sourceLine === null ||
+        position.ratio <= 0 ||
+        position.ratio >= 0.999
+      ) {
         container.scrollTop = Math.min(Math.max(position.ratio, 0), 1) * max;
         return;
       }

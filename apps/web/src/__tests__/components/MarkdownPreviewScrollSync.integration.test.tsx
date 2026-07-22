@@ -98,6 +98,7 @@ const createFrameQueue = () => {
 
 describe("长文档预览锚点同步", () => {
   let layoutScale = 1;
+  let anchorInset = 0;
   let resizeCallback: ResizeObserverCallback | null = null;
 
   beforeEach(() => {
@@ -110,6 +111,7 @@ describe("长文档预览锚点同步", () => {
     });
     mermaidRender.mockClear();
     layoutScale = 1;
+    anchorInset = 0;
     resizeCallback = null;
 
     vi.stubGlobal(
@@ -129,7 +131,7 @@ describe("长文档预览锚点同步", () => {
       function (this: HTMLElement) {
         const sourceLine = Number(this.dataset.wemdSourceStart);
         const top = Number.isFinite(sourceLine)
-          ? sourceLine * 24 * layoutScale
+          ? (anchorInset + sourceLine * 24) * layoutScale
           : 0;
         const height = Number.isFinite(sourceLine) ? 20 * layoutScale : 400;
         return {
@@ -150,6 +152,58 @@ describe("长文档预览锚点同步", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
+  });
+
+  it("只在编辑器真正滑到顶时让预览区精确归零", async () => {
+    anchorInset = 32;
+    let previewAdapter: ScrollSyncAdapter | null = null;
+    const { container } = render(
+      <MarkdownPreview
+        onScrollSyncReady={(adapter) => {
+          previewAdapter = adapter;
+        }}
+      />,
+    );
+
+    await waitFor(() => expect(previewAdapter).not.toBeNull());
+
+    const previewContainer = container.querySelector(
+      ".preview-container",
+    ) as HTMLElement;
+    Object.defineProperties(previewContainer, {
+      clientHeight: { configurable: true, value: 400 },
+      scrollHeight: { configurable: true, value: 2400 },
+    });
+    previewAdapter!.getPosition();
+    previewContainer.scrollTop = 320;
+
+    let editorPosition = { sourceLine: 0, ratio: 0 };
+    let editorScrollListener: () => void = () => undefined;
+    const editorAdapter: ScrollSyncAdapter = {
+      getPosition: () => editorPosition,
+      scrollToPosition: vi.fn(),
+      subscribeScroll: (listener) => {
+        editorScrollListener = listener;
+        return () => undefined;
+      },
+    };
+    const frames = createFrameQueue();
+    const coordinator = createEditorPreviewScrollSync(frames);
+    coordinator.setAdapter("editor", editorAdapter);
+    coordinator.setAdapter("preview", previewAdapter!);
+
+    editorScrollListener();
+    frames.flush();
+
+    expect(previewContainer.scrollTop).toBe(0);
+
+    editorPosition = { sourceLine: 0, ratio: 0.0005 };
+    previewContainer.scrollTop = 320;
+    editorScrollListener();
+    frames.flush();
+
+    expect(previewContainer.scrollTop).toBe(32);
+    coordinator.destroy();
   });
 
   it("异步内容改变布局后仍按编辑器源行恢复预览位置", async () => {
