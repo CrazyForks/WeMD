@@ -9,9 +9,15 @@ const previewCss = readFileSync(
 );
 
 describe("MarkdownPreview responsive layout", () => {
-  it("窄屏预览卡片使用容器宽度且 padding 计入盒模型", () => {
+  it("桌面预览保持固定的公众号画布宽度", () => {
     expect(previewCss).toMatch(
-      /@media\s*\(max-width:\s*768px\)[\s\S]*?\.preview-content\s*\{[\s\S]*?box-sizing:\s*border-box;[\s\S]*?width:\s*100%;/,
+      /\.preview-content\s*\{[\s\S]*?box-sizing:\s*border-box;[\s\S]*?width:\s*402px;/,
+    );
+  });
+
+  it("仅移动布局使用容器宽度", () => {
+    expect(previewCss).toMatch(
+      /@media\s*\(max-width:\s*768px\)[\s\S]*?\.app\[data-layout-mode=["']mobile["']\]\s+\.preview-content\s*\{[\s\S]*?width:\s*100%;/,
     );
   });
 });

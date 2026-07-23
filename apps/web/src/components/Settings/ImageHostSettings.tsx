@@ -8,6 +8,7 @@ import {
   QiniuPanel,
   S3Panel,
   TencentPanel,
+  type HostTestResult,
 } from "./ImageHostSettingsPanels";
 import "./ImageHostSettings.css";
 
@@ -30,7 +31,7 @@ export function ImageHostSettings() {
   const [viewingType, setViewingType] = useState<ImageHostConfig["type"]>(
     allConfigs.currentType,
   );
-  const [testResult, setTestResult] = useState<string | null>(null);
+  const [testResult, setTestResult] = useState<HostTestResult | null>(null);
 
   const activeType = allConfigs.currentType;
   const viewingConfig: ImageHostConfig = {
@@ -66,17 +67,21 @@ export function ImageHostSettings() {
   };
 
   const testConnection = async () => {
-    setTestResult("测试中...");
+    setTestResult({ status: "loading", message: "正在测试连接" });
     try {
       const { ImageHostManager } = await import(
         "../../services/image/ImageUploader"
       );
       const manager = new ImageHostManager(viewingConfig);
       const valid = await manager.validate();
-      setTestResult(valid ? "✅ 配置有效" : "❌ 配置无效");
+      setTestResult(
+        valid
+          ? { status: "success", message: "配置有效" }
+          : { status: "error", message: "配置无效" },
+      );
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
-      setTestResult(`❌ ${message}`);
+      setTestResult({ status: "error", message });
     }
   };
 
@@ -107,12 +112,17 @@ export function ImageHostSettings() {
         setAllConfigs((prev) => ({ ...prev, currentType: type }));
         setTestResult(null);
       } else {
-        setTestResult("❌ 无法启用：图床连接测试失败，请检查配置。");
-        await testConnection();
+        setTestResult({
+          status: "error",
+          message: "无法启用：图床连接测试失败，请检查配置",
+        });
       }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
-      setTestResult(`❌ 无法启用：验证过程出错 (${message})`);
+      setTestResult({
+        status: "error",
+        message: `无法启用：验证过程出错（${message}）`,
+      });
     } finally {
       if (btn) {
         btn.disabled = false;

@@ -9,7 +9,7 @@ import {
 
 const STORAGE_KEY = "wemd-editor-pane-ratio";
 const DEFAULT_RATIO = 0.58;
-const DIVIDER_WIDTH = 24;
+const DIVIDER_WIDTH = 16;
 const MIN_EDITOR_WIDTH = 340;
 const MIN_PREVIEW_WIDTH = 402;
 

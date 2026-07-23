@@ -1,5 +1,5 @@
 import type { SyntheticEvent } from "react";
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useFileSystem } from "../../hooks/useFileSystem";
 import toast from "react-hot-toast";
 import type { FileItem, FolderItem } from "../../store/fileTypes";
@@ -33,6 +33,7 @@ export function useSidebarState() {
     deleteFile,
     selectWorkspace,
     workspacePath,
+    workspaceRevision,
     createFolder,
     moveToFolder,
     renameFolder,
@@ -78,6 +79,52 @@ export function useSidebarState() {
   const [renameFolderValue, setRenameFolderValue] = useState("");
   const [showRenameFolderModal, setShowRenameFolderModal] = useState(false);
   const [sortMode, setSortModeState] = useState<SortMode>(getSortMode);
+  const previousWorkspaceRef = useRef({
+    path: workspacePath,
+    revision: workspaceRevision,
+  });
+
+  useEffect(() => {
+    const previousWorkspace = previousWorkspaceRef.current;
+    previousWorkspaceRef.current = {
+      path: workspacePath,
+      revision: workspaceRevision,
+    };
+
+    // 首次恢复工作区时保留折叠偏好；真正切换后清理所有指向旧工作区的状态。
+    if (
+      previousWorkspace.path === null ||
+      (previousWorkspace.path === workspacePath &&
+        previousWorkspace.revision === workspaceRevision)
+    ) {
+      return;
+    }
+
+    setFilter("");
+    setRenamingPath(null);
+    setRenameValue("");
+    setCollapsedFolders(new Set());
+    saveCollapsedState(new Set());
+    setMenuOpen(false);
+    setMenuPos({ x: 0, y: 0 });
+    setMenuTarget(null);
+    setMenuTargetFolder(null);
+    setDeleteTarget(null);
+    setDeleteFolderTarget(null);
+    setDeleteFolderExtras([]);
+    setDeleting(false);
+    setShowNewFolderModal(false);
+    setNewFolderName("");
+    setActiveFolder(null);
+    setShowMoveMenu(false);
+    setDraggingPath(null);
+    setDraggingFolderPath(null);
+    setDragOverTarget(null);
+    setTooltip(null);
+    setRenameFolderTarget(null);
+    setRenameFolderValue("");
+    setShowRenameFolderModal(false);
+  }, [workspacePath, workspaceRevision]);
 
   const isDragEnabled = !filter;
 
@@ -414,6 +461,7 @@ export function useSidebarState() {
     deleteFolder,
     selectWorkspace,
     workspacePath,
+    workspaceRevision,
     flattenFiles,
     refreshFiles,
 

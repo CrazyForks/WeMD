@@ -22,9 +22,10 @@
   --border-light: var(--ui-border-light);
 
   --accent-primary: var(--ui-accent-primary);
-  --accent-hover: color-mix(in srgb, var(--ui-accent-primary) 85%, #ffffff);
-  --accent-active: color-mix(in srgb, var(--ui-accent-primary) 75%, #000000);
+  --accent-hover: var(--ui-accent-hover);
+  --accent-active: var(--ui-accent-active);
   --accent-gradient: var(--ui-accent-gradient);
+  --on-accent: var(--ui-on-accent);
 
   --success: #10b981;
   --success-bg: #ecfdf5;

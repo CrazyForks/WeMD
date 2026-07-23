@@ -277,7 +277,6 @@ export async function copyToWechat(
         : "已复制，可以直接粘贴至微信公众号",
       {
         duration: 3000,
-        icon: "✅",
       },
     );
   } catch (error) {

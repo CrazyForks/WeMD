@@ -1,5 +1,10 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { FileSystemAdapter } from "../../storage/adapters/FileSystemAdapter";
+
+afterEach(() => {
+  delete (window as unknown as { showDirectoryPicker?: unknown })
+    .showDirectoryPicker;
+});
 
 describe("FileSystemAdapter.renameFile", () => {
   it("禁止跨目录重命名，避免误创建文件夹", async () => {
@@ -28,5 +33,91 @@ describe("FileSystemAdapter.renameFile", () => {
     expect(readSpy).toHaveBeenCalledWith("docs/old.md");
     expect(writeSpy).toHaveBeenCalledWith("docs/new.md", "content");
     expect(deleteSpy).toHaveBeenCalledWith("docs/old.md");
+  });
+});
+
+describe("FileSystemAdapter.selectWorkspace", () => {
+  it("直接选择并启用新的工作区目录", async () => {
+    const requestPermission = vi.fn(async () => "granted" as const);
+    const directoryHandle = {
+      name: "新的工作区",
+      requestPermission,
+    } as unknown as FileSystemDirectoryHandle;
+    const showDirectoryPicker = vi.fn(async () => directoryHandle);
+    Object.defineProperty(window, "showDirectoryPicker", {
+      value: showDirectoryPicker,
+      configurable: true,
+    });
+    const adapter = new FileSystemAdapter();
+
+    const result = await adapter.selectWorkspace();
+
+    expect(showDirectoryPicker).toHaveBeenCalledWith({ mode: "readwrite" });
+    expect(requestPermission).toHaveBeenCalledWith({ mode: "readwrite" });
+    expect(result).toEqual({
+      success: true,
+      workspaceName: "新的工作区",
+    });
+    expect(adapter.directoryName).toBe("新的工作区");
+    expect(adapter.ready).toBe(true);
+  });
+
+  it("用户取消选择时保留当前工作区", async () => {
+    const currentHandle = {
+      name: "当前工作区",
+      requestPermission: vi.fn(async () => "granted" as const),
+    } as unknown as FileSystemDirectoryHandle;
+    const showDirectoryPicker = vi
+      .fn<() => Promise<FileSystemDirectoryHandle>>()
+      .mockResolvedValueOnce(currentHandle)
+      .mockRejectedValueOnce(new DOMException("已取消", "AbortError"));
+    Object.defineProperty(window, "showDirectoryPicker", {
+      value: showDirectoryPicker,
+      configurable: true,
+    });
+    const adapter = new FileSystemAdapter();
+
+    await adapter.selectWorkspace();
+
+    await expect(adapter.selectWorkspace()).resolves.toEqual({
+      success: false,
+      canceled: true,
+    });
+    expect(adapter.directoryName).toBe("当前工作区");
+    expect(adapter.ready).toBe(true);
+  });
+
+  it("切换前保存失败时不提交候选工作区", async () => {
+    const currentHandle = {
+      name: "当前工作区",
+      requestPermission: vi.fn(async () => "granted" as const),
+    } as unknown as FileSystemDirectoryHandle;
+    const nextHandle = {
+      name: "候选工作区",
+      requestPermission: vi.fn(async () => "granted" as const),
+    } as unknown as FileSystemDirectoryHandle;
+    const showDirectoryPicker = vi
+      .fn<() => Promise<FileSystemDirectoryHandle>>()
+      .mockResolvedValueOnce(currentHandle)
+      .mockResolvedValueOnce(nextHandle);
+    Object.defineProperty(window, "showDirectoryPicker", {
+      value: showDirectoryPicker,
+      configurable: true,
+    });
+    const adapter = new FileSystemAdapter();
+    const beforeCommit = vi.fn(async () => false);
+
+    await adapter.selectWorkspace();
+
+    await expect(adapter.selectWorkspace({ beforeCommit })).resolves.toEqual({
+      success: false,
+      canceled: true,
+    });
+    expect(beforeCommit).toHaveBeenCalledTimes(1);
+    expect(showDirectoryPicker.mock.invocationCallOrder[1]).toBeLessThan(
+      beforeCommit.mock.invocationCallOrder[0],
+    );
+    expect(adapter.directoryName).toBe("当前工作区");
+    expect(adapter.ready).toBe(true);
   });
 });

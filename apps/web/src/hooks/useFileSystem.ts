@@ -43,6 +43,7 @@ export function useFileSystem(options: UseFileSystemOptions = {}) {
   const electron = getElectron();
   const {
     workspacePath,
+    workspaceRevision,
     files,
     currentFile,
     isLoading,
@@ -51,6 +52,7 @@ export function useFileSystem(options: UseFileSystemOptions = {}) {
     isDirty,
     isRestoring,
     setWorkspacePath,
+    bumpWorkspaceRevision,
     setFiles,
     setCurrentFile,
     setLoading,
@@ -63,6 +65,25 @@ export function useFileSystem(options: UseFileSystemOptions = {}) {
   const { setMarkdown, markdown } = useEditorStore();
   const { themeId: theme, themeName } = useThemeStore();
   const isCreating = useRef<boolean>(false);
+
+  const resetActiveFile = useCallback(() => {
+    setCurrentFile(null);
+    setMarkdown("");
+    setIsDirty(false);
+    setLastSavedContent("");
+    setLastSavedAt(null);
+    try {
+      window.localStorage?.removeItem?.(LAST_FILE_KEY);
+    } catch {
+      /* 浏览器禁用存储时不影响工作区切换 */
+    }
+  }, [
+    setCurrentFile,
+    setIsDirty,
+    setLastSavedAt,
+    setLastSavedContent,
+    setMarkdown,
+  ]);
 
   const resolveAvailableFilePath = useCallback(
     async (folderPath: string | undefined, fileName: string) => {
@@ -119,7 +140,10 @@ export function useFileSystem(options: UseFileSystemOptions = {}) {
         try {
           const res = await electron.fs.setWorkspace(path);
           if (res.success) {
+            resetActiveFile();
+            setFiles([]);
             setWorkspacePath(path);
+            bumpWorkspaceRevision();
             localStorage.setItem(WORKSPACE_KEY, path);
             await refreshFiles(path);
           } else {
@@ -135,23 +159,12 @@ export function useFileSystem(options: UseFileSystemOptions = {}) {
       }
 
       setWorkspacePath(path);
+      bumpWorkspaceRevision();
       await refreshFiles();
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [electron],
+    [electron, resetActiveFile],
   );
-
-  const selectWorkspace = useCallback(async () => {
-    if (electron) {
-      const res = await electron.fs.selectWorkspace();
-      if (res.success && res.path) {
-        await loadWorkspace(res.path);
-      }
-      return;
-    }
-
-    toast('请在右上角"存储模式"中切换文件夹', { icon: "ℹ️" });
-  }, [loadWorkspace, electron]);
 
   const openFile = useCallback(
     async (file: FileItem) => {
@@ -327,9 +340,10 @@ export function useFileSystem(options: UseFileSystemOptions = {}) {
     ],
   );
 
-  const saveFile = useCallback(
-    async (showToast = false) => {
-      if (!currentFile) return;
+  const persistActiveFile = useCallback(
+    async (showToast = false): Promise<boolean> => {
+      const activeFile = useFileStore.getState().currentFile;
+      if (!activeFile) return true;
       setSaving(true);
 
       const { markdown: latestMarkdown } = useEditorStore.getState();
@@ -341,48 +355,108 @@ export function useFileSystem(options: UseFileSystemOptions = {}) {
         body: latestMarkdown,
         theme: currentTheme,
         themeName: currentThemeName,
-        title: currentFile.title || stripMarkdownExtension(currentFile.name),
+        title: activeFile.title || stripMarkdownExtension(activeFile.name),
       });
 
       if (fullContent === useFileStore.getState().lastSavedContent) {
         setSaving(false);
+        setIsDirty(false);
         if (showToast) toast.success("内容无变化");
-        return;
+        return true;
       }
 
       let success = false;
       let errorMsg = "";
 
-      if (electron) {
-        const res = await electron.fs.saveFile({
-          filePath: currentFile.path,
-          content: fullContent,
-        });
-        if (res.success) success = true;
-        else errorMsg = res.error || "Unknown error";
-      } else if (adapter && storageReady) {
-        try {
-          await adapter.writeFile(currentFile.path, fullContent);
+      try {
+        if (electron) {
+          const res = await electron.fs.saveFile({
+            filePath: activeFile.path,
+            content: fullContent,
+          });
+          if (res.success) success = true;
+          else errorMsg = res.error || "Unknown error";
+        } else if (adapter && storageReady) {
+          await adapter.writeFile(activeFile.path, fullContent);
           success = true;
-        } catch (error: unknown) {
-          errorMsg = error instanceof Error ? error.message : String(error);
+        } else {
+          errorMsg = "存储尚未就绪";
         }
+      } catch (error: unknown) {
+        errorMsg = error instanceof Error ? error.message : String(error);
+      } finally {
+        setSaving(false);
       }
-
-      setSaving(false);
 
       if (success) {
         setLastSavedContent(fullContent);
         setLastSavedAt(new Date());
         setIsDirty(false);
         if (showToast) toast.success("已保存");
+        return true;
       } else {
         toast.error("保存失败: " + errorMsg);
+        return false;
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [currentFile, electron, adapter, storageReady],
+    [electron, adapter, storageReady],
   );
+
+  const saveFile = useCallback(
+    async (showToast = false) => {
+      await persistActiveFile(showToast);
+    },
+    [persistActiveFile],
+  );
+
+  const selectWorkspace = useCallback(async () => {
+    if (electron) {
+      if (!(await persistActiveFile())) return;
+
+      const res = await electron.fs.selectWorkspace();
+      if (res.success && res.path) {
+        await loadWorkspace(res.path);
+      }
+      return;
+    }
+
+    if (storageType === "filesystem" && adapter?.selectWorkspace) {
+      const selection = adapter.selectWorkspace({
+        beforeCommit: () => persistActiveFile(),
+      });
+      setLoading(true);
+      try {
+        const result = await selection;
+        if (result.success) {
+          resetActiveFile();
+          setFiles([]);
+          setWorkspacePath(result.workspaceName || "本地文件夹");
+          bumpWorkspaceRevision();
+          await refreshFiles();
+        } else if (!result.canceled) {
+          toast.error(result.error || "无法切换工作区");
+        }
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    toast('请在右上角"存储模式"中切换文件夹', { icon: "ℹ️" });
+  }, [
+    adapter,
+    bumpWorkspaceRevision,
+    electron,
+    loadWorkspace,
+    persistActiveFile,
+    refreshFiles,
+    resetActiveFile,
+    setFiles,
+    setLoading,
+    setWorkspacePath,
+    storageType,
+  ]);
 
   const updateFileTitle = useCallback(
     async (file: FileItem, newName: string) => {
@@ -564,6 +638,7 @@ export function useFileSystem(options: UseFileSystemOptions = {}) {
 
   return {
     workspacePath,
+    workspaceRevision,
     files,
     currentFile,
     isLoading,

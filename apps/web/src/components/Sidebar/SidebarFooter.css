@@ -1,22 +1,22 @@
 .sidebar-footer {
-  padding: 16px 20px;
+  min-height: 44px;
+  padding: 8px 14px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-top: var(--border-width) solid var(--border-light);
-  background: color-mix(in srgb, var(--bg-primary) 60%, transparent);
-  backdrop-filter: blur(10px);
+  border-top: 0;
+  background: transparent;
 }
 
 .footer-brand {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 7px;
 }
 
 .footer-logo img {
-  width: 24px;
-  height: 24px;
+  width: 18px;
+  height: 18px;
   display: block;
 }
 
@@ -27,13 +27,13 @@
 }
 
 .footer-name {
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--text-primary);
 }
 
 .footer-version {
-  font-size: 11px;
+  font-size: 9px;
   color: var(--text-tertiary);
   font-family: var(--font-mono);
 }
@@ -41,7 +41,7 @@
 .footer-links {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 2px;
 }
 
 .footer-links a:hover {
@@ -54,9 +54,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-md);
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
   color: var(--text-secondary);
   transition: all 0.2s ease;
   position: relative;

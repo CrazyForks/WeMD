@@ -5,6 +5,7 @@ import { useFileSystem } from "../../hooks/useFileSystem";
 const mocks = vi.hoisted(() => {
   const fileStoreState = {
     workspacePath: "/workspace",
+    workspaceRevision: 0,
     files: [],
     currentFile: null,
     isLoading: false,
@@ -13,6 +14,7 @@ const mocks = vi.hoisted(() => {
     isDirty: false,
     isRestoring: false,
     setWorkspacePath: vi.fn(),
+    bumpWorkspaceRevision: vi.fn(),
     setFiles: vi.fn(),
     setCurrentFile: vi.fn(),
     setLoading: vi.fn(),
@@ -23,22 +25,30 @@ const mocks = vi.hoisted(() => {
     setIsRestoring: vi.fn(),
   };
 
-  const fileStoreGetState = vi.fn(() => ({
+  const fileStoreSnapshot = {
     currentFile: null,
     isDirty: false,
     lastSavedContent: "",
     files: [],
     isRestoring: false,
-  }));
+  } as {
+    currentFile: { name: string; path: string; title?: string } | null;
+    isDirty: boolean;
+    lastSavedContent: string;
+    files: unknown[];
+    isRestoring: boolean;
+  };
+  const fileStoreGetState = vi.fn(() => fileStoreSnapshot);
 
   const editorStoreState = {
     setMarkdown: vi.fn(),
     markdown: "",
   };
 
-  const editorStoreGetState = vi.fn(() => ({
+  const editorStoreSnapshot = {
     markdown: "",
-  }));
+  };
+  const editorStoreGetState = vi.fn(() => editorStoreSnapshot);
 
   const selectTheme = vi.fn();
   const themeStoreState = {
@@ -61,14 +71,21 @@ const mocks = vi.hoisted(() => {
 
   return {
     fileStoreState,
+    fileStoreSnapshot,
     fileStoreGetState,
     editorStoreState,
+    editorStoreSnapshot,
     editorStoreGetState,
     themeStoreState,
     themeStoreGetState,
     storageContext,
     selectTheme,
     useFileSystemEffectsMock: vi.fn(),
+    localStorage: {
+      getItem: vi.fn(() => null),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+    },
   };
 });
 
@@ -121,17 +138,26 @@ const setElectronMock = (electron: unknown) => {
   });
 };
 
-describe("useFileSystem createFile", () => {
+describe("useFileSystem 文件操作", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.storageContext.adapter = null;
     mocks.storageContext.ready = false;
     mocks.storageContext.type = "indexeddb";
+    mocks.fileStoreState.workspaceRevision = 0;
+    mocks.fileStoreSnapshot.currentFile = null;
+    mocks.fileStoreSnapshot.isDirty = false;
+    mocks.fileStoreSnapshot.lastSavedContent = "";
+    mocks.fileStoreSnapshot.files = [];
+    mocks.fileStoreSnapshot.isRestoring = false;
+    mocks.editorStoreSnapshot.markdown = "";
+    vi.stubGlobal("localStorage", mocks.localStorage);
     delete (window as unknown as { electron?: unknown }).electron;
   });
 
   afterEach(() => {
     delete (window as unknown as { electron?: unknown }).electron;
+    vi.unstubAllGlobals();
   });
 
   it("Electron 模式下使用文章标题生成默认文件名", async () => {
@@ -219,5 +245,273 @@ describe("useFileSystem createFile", () => {
         title: "新文章",
       }),
     );
+  });
+
+  it("浏览器文件夹模式下可从文件栏直接切换工作区", async () => {
+    const adapter = {
+      listFiles: vi.fn(async () => []),
+      selectWorkspace: vi.fn(async () => ({
+        success: true,
+        workspaceName: "新的工作区",
+      })),
+    };
+    mocks.storageContext.adapter = adapter;
+    mocks.storageContext.ready = true;
+    mocks.storageContext.type = "filesystem";
+
+    const { result } = renderHook(() => useFileSystem());
+
+    await act(async () => {
+      await result.current.selectWorkspace();
+    });
+
+    expect(adapter.selectWorkspace).toHaveBeenCalledTimes(1);
+    expect(mocks.fileStoreState.setWorkspacePath).toHaveBeenCalledWith(
+      "新的工作区",
+    );
+    expect(mocks.fileStoreState.bumpWorkspaceRevision).toHaveBeenCalledTimes(1);
+    expect(mocks.fileStoreState.setCurrentFile).toHaveBeenCalledWith(null);
+    expect(mocks.editorStoreState.setMarkdown).toHaveBeenCalledWith("");
+    expect(adapter.listFiles).toHaveBeenCalledTimes(1);
+    expect(mocks.fileStoreState.setFiles).toHaveBeenCalledWith([]);
+  });
+
+  it("浏览器切换工作区前保存尚未自动保存的文章", async () => {
+    const savedContent = [
+      "---",
+      "theme: default",
+      'themeName: "默认主题"',
+      'title: "草稿"',
+      "---",
+      "",
+      "# 旧内容",
+      "",
+    ].join("\n");
+    const writeFile = vi.fn(async () => {});
+    const adapter = {
+      listFiles: vi.fn(async () => []),
+      writeFile,
+      selectWorkspace: vi.fn(
+        async (options?: { beforeCommit?: () => Promise<boolean> }) => {
+          const canCommit = (await options?.beforeCommit?.()) ?? true;
+          return canCommit
+            ? { success: true, workspaceName: "新的工作区" }
+            : { success: false, canceled: true };
+        },
+      ),
+    };
+    mocks.fileStoreSnapshot.currentFile = {
+      name: "草稿.md",
+      path: "草稿.md",
+      title: "草稿",
+    };
+    mocks.fileStoreSnapshot.isDirty = true;
+    mocks.fileStoreSnapshot.lastSavedContent = savedContent;
+    mocks.editorStoreSnapshot.markdown = "# 尚未自动保存的内容\n";
+    mocks.storageContext.adapter = adapter;
+    mocks.storageContext.ready = true;
+    mocks.storageContext.type = "filesystem";
+
+    const { result } = renderHook(() => useFileSystem());
+
+    await act(async () => {
+      await result.current.selectWorkspace();
+    });
+
+    expect(writeFile).toHaveBeenCalledWith(
+      "草稿.md",
+      expect.stringContaining("# 尚未自动保存的内容"),
+    );
+    expect(mocks.fileStoreState.setWorkspacePath).toHaveBeenCalledWith(
+      "新的工作区",
+    );
+  });
+
+  it("浏览器保存旧文章失败时保留当前工作区", async () => {
+    const savedContent = [
+      "---",
+      "theme: default",
+      'themeName: "默认主题"',
+      'title: "草稿"',
+      "---",
+      "",
+      "# 旧内容",
+      "",
+    ].join("\n");
+    const listFiles = vi.fn(async () => []);
+    const adapter = {
+      listFiles,
+      writeFile: vi.fn(async () => {
+        throw new Error("磁盘写入失败");
+      }),
+      selectWorkspace: vi.fn(
+        async (options?: { beforeCommit?: () => Promise<boolean> }) => {
+          const canCommit = (await options?.beforeCommit?.()) ?? true;
+          return canCommit
+            ? { success: true, workspaceName: "新的工作区" }
+            : { success: false, canceled: true };
+        },
+      ),
+    };
+    mocks.fileStoreSnapshot.currentFile = {
+      name: "草稿.md",
+      path: "草稿.md",
+      title: "草稿",
+    };
+    mocks.fileStoreSnapshot.isDirty = true;
+    mocks.fileStoreSnapshot.lastSavedContent = savedContent;
+    mocks.editorStoreSnapshot.markdown = "# 尚未自动保存的内容\n";
+    mocks.storageContext.adapter = adapter;
+    mocks.storageContext.ready = true;
+    mocks.storageContext.type = "filesystem";
+
+    const { result } = renderHook(() => useFileSystem());
+
+    await act(async () => {
+      await result.current.selectWorkspace();
+    });
+
+    expect(mocks.fileStoreState.setWorkspacePath).not.toHaveBeenCalled();
+    expect(mocks.fileStoreState.setCurrentFile).not.toHaveBeenCalled();
+    expect(listFiles).not.toHaveBeenCalled();
+  });
+
+  it("内容已撤销回保存版本时清除残留的未保存状态", async () => {
+    const savedContent = [
+      "---",
+      "theme: default",
+      'themeName: "默认主题"',
+      'title: "草稿"',
+      "---",
+      "",
+      "# 已保存内容",
+      "",
+    ].join("\n");
+    const writeFile = vi.fn(async () => {});
+    const adapter = {
+      listFiles: vi.fn(async () => []),
+      writeFile,
+      selectWorkspace: vi.fn(
+        async (options?: { beforeCommit?: () => Promise<boolean> }) => {
+          const canCommit = (await options?.beforeCommit?.()) ?? true;
+          return canCommit
+            ? { success: true, workspaceName: "新的工作区" }
+            : { success: false, canceled: true };
+        },
+      ),
+    };
+    mocks.fileStoreSnapshot.currentFile = {
+      name: "草稿.md",
+      path: "草稿.md",
+      title: "草稿",
+    };
+    mocks.fileStoreSnapshot.isDirty = true;
+    mocks.fileStoreSnapshot.lastSavedContent = savedContent;
+    mocks.editorStoreSnapshot.markdown = "# 已保存内容\n";
+    mocks.storageContext.adapter = adapter;
+    mocks.storageContext.ready = true;
+    mocks.storageContext.type = "filesystem";
+
+    const { result } = renderHook(() => useFileSystem());
+
+    await act(async () => {
+      await result.current.selectWorkspace();
+    });
+
+    expect(writeFile).not.toHaveBeenCalled();
+    expect(mocks.fileStoreState.setIsDirty).toHaveBeenCalledWith(false);
+    expect(mocks.fileStoreState.bumpWorkspaceRevision).toHaveBeenCalledTimes(1);
+  });
+
+  it("浏览器新工作区扫描失败时先清空旧文件列表", async () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    const adapter = {
+      listFiles: vi.fn(async () => {
+        throw new Error("目录扫描失败");
+      }),
+      selectWorkspace: vi.fn(
+        async (options?: { beforeCommit?: () => Promise<boolean> }) => {
+          await options?.beforeCommit?.();
+          return { success: true, workspaceName: "新的工作区" };
+        },
+      ),
+    };
+    mocks.storageContext.adapter = adapter;
+    mocks.storageContext.ready = true;
+    mocks.storageContext.type = "filesystem";
+
+    const { result } = renderHook(() => useFileSystem());
+
+    await act(async () => {
+      await result.current.selectWorkspace();
+    });
+
+    expect(mocks.fileStoreState.setFiles).toHaveBeenCalledWith([]);
+    expect(mocks.fileStoreState.setCurrentFile).toHaveBeenCalledWith(null);
+    expect(consoleError).toHaveBeenCalledWith(
+      "加载文件列表失败:",
+      expect.any(Error),
+    );
+    consoleError.mockRestore();
+  });
+
+  it("Electron 切换工作区前先保存尚未自动保存的文章", async () => {
+    const savedContent = [
+      "---",
+      "theme: default",
+      'themeName: "默认主题"',
+      'title: "草稿"',
+      "---",
+      "",
+      "# 旧内容",
+      "",
+    ].join("\n");
+    const saveFile = vi.fn(async () => ({ success: true }));
+    const selectWorkspace = vi.fn(async () => ({
+      success: true,
+      path: "/new-workspace",
+    }));
+    const setWorkspace = vi.fn(async () => ({
+      success: true,
+      path: "/new-workspace",
+    }));
+    const listFiles = vi.fn(async () => ({ success: true, files: [] }));
+    mocks.fileStoreSnapshot.currentFile = {
+      name: "草稿.md",
+      path: "/workspace/草稿.md",
+      title: "草稿",
+    };
+    mocks.fileStoreSnapshot.isDirty = true;
+    mocks.fileStoreSnapshot.lastSavedContent = savedContent;
+    mocks.editorStoreSnapshot.markdown = "# 尚未自动保存的内容\n";
+    setElectronMock({
+      fs: {
+        saveFile,
+        selectWorkspace,
+        setWorkspace,
+        listFiles,
+      },
+    });
+
+    const { result } = renderHook(() => useFileSystem());
+
+    await act(async () => {
+      await result.current.selectWorkspace();
+    });
+
+    expect(saveFile).toHaveBeenCalledWith({
+      filePath: "/workspace/草稿.md",
+      content: expect.stringContaining("# 尚未自动保存的内容"),
+    });
+    expect(saveFile.mock.invocationCallOrder[0]).toBeLessThan(
+      selectWorkspace.mock.invocationCallOrder[0],
+    );
+    expect(setWorkspace).toHaveBeenCalledWith("/new-workspace");
+    expect(mocks.fileStoreState.setWorkspacePath).toHaveBeenCalledWith(
+      "/new-workspace",
+    );
+    expect(mocks.fileStoreState.bumpWorkspaceRevision).toHaveBeenCalledTimes(1);
   });
 });

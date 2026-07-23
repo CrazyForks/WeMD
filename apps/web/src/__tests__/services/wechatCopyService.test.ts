@@ -192,6 +192,16 @@ describe("wechatCopyService clipboard strategy", () => {
     expect(mocked.toastError).not.toHaveBeenCalled();
   });
 
+  it("复制成功提示不使用 emoji 图标", async () => {
+    vi.spyOn(document, "execCommand").mockReturnValue(true);
+
+    await copyToWechat("test", "#wemd p { margin: 18px 0; }");
+
+    expect(mocked.toastSuccess).toHaveBeenCalledTimes(1);
+    const [, options] = mocked.toastSuccess.mock.calls[0];
+    expect(options).not.toHaveProperty("icon");
+  });
+
   it("复制到公众号时使用当前表格自动换行偏好", async () => {
     mocked.tableWrapEnabled = true;
 

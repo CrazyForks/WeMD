@@ -166,16 +166,9 @@ title: "旧标题"
       teardown: async () => undefined,
     };
 
-    const { container } = render(<FileSystemHistory adapter={adapter} />);
+    render(<FileSystemHistory adapter={adapter} />);
 
-    const createButton = container.querySelector(
-      'button[data-tooltip="新建文章"]',
-    ) as HTMLButtonElement | null;
-    if (!createButton) {
-      throw new Error("create button not found");
-    }
-
-    fireEvent.click(createButton);
+    fireEvent.click(screen.getByRole("button", { name: "新建文章" }));
 
     await waitFor(() => {
       expect(writeFile).toHaveBeenCalled();

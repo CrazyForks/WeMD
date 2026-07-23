@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { Header } from "../../components/Header/Header";
 import { useWindowControls } from "../../hooks/useWindowControls";
 import { useUITheme } from "../../hooks/useUITheme";
@@ -105,15 +111,15 @@ describe("Header", () => {
   it("renders logo and core elements", () => {
     render(<Header />);
 
+    expect(screen.getByRole("img", { name: "WeMD Logo" })).toBeInTheDocument();
     expect(screen.getByText("WeMD")).toBeInTheDocument();
-    expect(screen.getByText("公众号 Markdown 排版编辑器")).toBeInTheDocument();
     expect(screen.getByText("复制到公众号")).toBeInTheDocument();
   });
 
   it("toggles theme interaction", () => {
     render(<Header />);
 
-    const themeBtn = screen.getByTitle("切换到暗色模式");
+    const themeBtn = screen.getByLabelText("切换到暗色模式");
     fireEvent.click(themeBtn);
     expect(mockSetTheme).toHaveBeenCalledWith("dark");
   });
@@ -130,6 +136,14 @@ describe("Header", () => {
 
     fireEvent.click(screen.getByText("复制 HTML"));
     expect(mockCopyAsHtml).toHaveBeenCalled();
+  });
+
+  it("opens article theme panel from the compact navigation", async () => {
+    render(<Header />);
+
+    fireEvent.click(screen.getByRole("button", { name: "文章主题" }));
+
+    expect(await screen.findByTestId("theme-panel")).toBeInTheDocument();
   });
 
   it("does not render window controls on Web/Mac", () => {
@@ -189,10 +203,16 @@ describe("Header", () => {
 
     fireEvent.click(screen.getByLabelText("隐藏标题栏"));
 
+    const floatingToolbar = document.querySelector(".floating-toolbar");
+    expect(floatingToolbar).not.toBeNull();
     expect(screen.getByLabelText("显示标题栏")).toBeInTheDocument();
     expect(screen.getByLabelText("主题管理")).toBeInTheDocument();
     expect(screen.getByLabelText("图床设置")).toBeInTheDocument();
-    expect(screen.getByLabelText("复制到公众号")).toBeInTheDocument();
+    expect(
+      within(floatingToolbar as HTMLElement).getByRole("button", {
+        name: "复制到公众号",
+      }),
+    ).toBeInTheDocument();
   });
 
   it("persists header visibility to localStorage", async () => {

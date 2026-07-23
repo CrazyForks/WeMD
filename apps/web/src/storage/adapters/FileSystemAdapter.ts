@@ -1,4 +1,8 @@
-import type { StorageAdapter } from "../StorageAdapter";
+import type {
+  StorageAdapter,
+  WorkspaceSelectionOptions,
+  WorkspaceSelectionResult,
+} from "../StorageAdapter";
 import type {
   FileItem,
   StorageAdapterContext,
@@ -151,6 +155,49 @@ export class FileSystemAdapter implements StorageAdapter {
   async teardown() {
     this.directoryHandle = null;
     this.ready = false;
+  }
+
+  async selectWorkspace(
+    options?: WorkspaceSelectionOptions,
+  ): Promise<WorkspaceSelectionResult> {
+    if (!("showDirectoryPicker" in window)) {
+      return {
+        success: false,
+        error: "当前浏览器不支持直接选择本地文件夹",
+      };
+    }
+
+    try {
+      const nextHandle = await window.showDirectoryPicker({
+        mode: "readwrite",
+      });
+      const permission = await nextHandle.requestPermission({
+        mode: "readwrite",
+      });
+      if (permission !== "granted") {
+        return { success: false, error: "未获得文件夹读写权限" };
+      }
+
+      if (options?.beforeCommit && !(await options.beforeCommit())) {
+        return { success: false, canceled: true };
+      }
+
+      this.directoryHandle = nextHandle;
+      this.ready = true;
+      await this.persistHandle(nextHandle);
+      return {
+        success: true,
+        workspaceName: nextHandle.name,
+      };
+    } catch (error) {
+      if ((error as { name?: string }).name === "AbortError") {
+        return { success: false, canceled: true };
+      }
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
   }
 
   // --- 目录操作方法 ---

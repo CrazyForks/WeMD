@@ -232,16 +232,13 @@ export function FileSystemHistory({ adapter }: FileSystemHistoryProps) {
 
   return (
     <aside className="history-sidebar">
+      <button className="history-new-article-button" onClick={handleCreate}>
+        <Plus size={18} />
+        <span>新建文章</span>
+      </button>
       <div className="history-header">
         <h3>文件列表</h3>
         <div className="history-actions">
-          <button
-            className="btn-secondary btn-icon-only"
-            onClick={handleCreate}
-            data-tooltip="新建文章"
-          >
-            <Plus size={16} />
-          </button>
           <button
             className="btn-secondary btn-icon-only"
             onClick={handleSave}

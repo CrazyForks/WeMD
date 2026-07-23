@@ -21,22 +21,25 @@ body,
      ======================================== */
 
   /* Colors */
-  --ui-bg-page: #f8f9fa;
+  --ui-bg-page: #f9f9f9;
   --ui-bg-primary: #ffffff;
-  --ui-bg-secondary: #f6f8fb;
-  --ui-bg-tertiary: #eef2f6;
-  --ui-bg-card-muted: #f1f5f9;
-  --ui-bg-hover: #e6f5eb;
+  --ui-bg-secondary: #f3f3f3;
+  --ui-bg-tertiary: #eeeeee;
+  --ui-bg-card-muted: #e8e8e8;
+  --ui-bg-hover: #eeeeee;
 
-  --ui-text-primary: #0f172a;
-  --ui-text-secondary: #334155;
-  --ui-text-tertiary: #64748b;
+  --ui-text-primary: #1a1c1c;
+  --ui-text-secondary: #3d4a3f;
+  --ui-text-tertiary: #5f6d61;
 
-  --ui-border-color: #e2e8f0;
-  --ui-border-light: #e2e8f0;
+  --ui-border-color: #e2e2e2;
+  --ui-border-light: #e2e2e2;
 
-  --ui-accent-primary: #07c160;
-  --ui-accent-gradient: linear-gradient(135deg, #07c160 0%, #05a850 100%);
+  --ui-accent-primary: #047857;
+  --ui-accent-hover: #006d3d;
+  --ui-accent-active: #006d3d;
+  --ui-accent-gradient: linear-gradient(135deg, #047857 0%, #006d3d 100%);
+  --ui-on-accent: #ffffff;
 
   /* Borders & Radius */
   --ui-border-width: 1px;
@@ -79,6 +82,7 @@ body,
   --border-color: var(--ui-border-color);
   --accent-primary: var(--ui-accent-primary);
   --accent-gradient: var(--ui-accent-gradient);
+  --on-accent: var(--ui-on-accent);
   --shadow-sm: var(--ui-shadow-sm);
   --shadow-md: var(--ui-shadow-md);
   --shadow-lg: var(--ui-shadow-lg);
@@ -120,15 +124,18 @@ body,
   /* Colors - 柔和的浅色文字 */
   --ui-text-primary: #d4d4d4;
   --ui-text-secondary: #9d9d9d;
-  --ui-text-tertiary: #6a6a6a;
+  --ui-text-tertiary: #949494;
 
   /* 边框 - 柔和的深色调 */
   --ui-border-color: #3c3c3c;
   --ui-border-light: #404040;
 
-  /* 保持微信绿作为强调色 */
-  --ui-accent-primary: #07c160;
-  --ui-accent-gradient: linear-gradient(135deg, #07c160 0%, #05a850 100%);
+  /* 暗色界面使用更沉稳的翡翠绿，并配套高对比深色前景 */
+  --ui-accent-primary: #13a072;
+  --ui-accent-hover: #20ad80;
+  --ui-accent-active: #15966a;
+  --ui-accent-gradient: linear-gradient(135deg, #13a072 0%, #15966a 100%);
+  --ui-on-accent: #0b1f16;
 
   /* Borders & Radius - 保持与默认主题一致 */
   --ui-border-width: 1px;

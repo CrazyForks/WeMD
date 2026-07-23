@@ -12,7 +12,7 @@ import "./styles/global.css";
 import "./App.css";
 
 import { useStorageContext } from "./storage/StorageContext";
-import { Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { useHistoryStore } from "./store/historyStore";
 import { useFileStore } from "./store/fileStore";
 import { platform } from "./lib/platformAdapter";
@@ -141,7 +141,7 @@ function App() {
     return saved !== "false";
   });
   const [historyWidth, setHistoryWidth] = useState<string>(
-    showHistory ? "280px" : "0px",
+    showHistory ? "256px" : "0px",
   );
 
   useEffect(() => {
@@ -154,12 +154,17 @@ function App() {
 
   useEffect(() => {
     if (showHistory) {
-      setHistoryWidth("280px");
+      setHistoryWidth("256px");
       return;
     }
     const timer = window.setTimeout(() => setHistoryWidth("0px"), 350);
     return () => window.clearTimeout(timer);
   }, [showHistory]);
+
+  const handleHistoryToggle = () => {
+    if (!showHistory) setHistoryWidth("256px");
+    setShowHistory((visible) => !visible);
+  };
 
   const mainClass = "app-main";
   const mainStyle = useMemo(
@@ -232,7 +237,7 @@ function App() {
               WebkitBackdropFilter: "blur(12px)",
               color: "#1a1a1a",
               boxShadow: "0 12px 30px -10px rgba(0, 0, 0, 0.12)",
-              borderRadius: "50px",
+              borderRadius: "10px",
               padding: "10px 20px",
               fontSize: "14px",
               fontWeight: 500,
@@ -241,8 +246,8 @@ function App() {
             },
             success: {
               iconTheme: {
-                primary: "#07c160",
-                secondary: "#fff",
+                primary: "var(--accent-primary)",
+                secondary: "var(--on-accent)",
               },
               duration: 2000,
             },
@@ -256,20 +261,23 @@ function App() {
           }}
         />
         <Header />
-        <button
-          className={`history-toggle ${showHistory ? "" : "is-collapsed"}`}
-          onClick={() => setShowHistory((prev) => !prev)}
-          aria-label={showHistory ? "隐藏列表" : "显示列表"}
-        >
-          <span className="sr-only">
-            {showHistory ? "隐藏列表" : "显示列表"}
-          </span>
-        </button>
         <main
           className={mainClass}
           style={mainStyle}
           data-show-history={showHistory}
         >
+          <button
+            className={`history-toggle ${showHistory ? "" : "is-collapsed"}`}
+            onClick={handleHistoryToggle}
+            aria-label={showHistory ? "隐藏文件栏" : "显示文件栏"}
+            title={showHistory ? "隐藏文件栏" : "显示文件栏"}
+          >
+            {showHistory ? (
+              <ChevronLeft size={16} />
+            ) : (
+              <ChevronRight size={16} />
+            )}
+          </button>
           <div
             className={`history-pane ${showHistory ? "is-visible" : "is-hidden"}`}
             aria-hidden={!showHistory}

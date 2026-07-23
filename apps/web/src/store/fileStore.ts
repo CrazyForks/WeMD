@@ -3,6 +3,7 @@ import type { FileStoreState } from "./fileTypes";
 
 export const useFileStore = create<FileStoreState>((set) => ({
   workspacePath: null,
+  workspaceRevision: 0,
   files: [],
   currentFile: null,
   isLoading: false,
@@ -15,6 +16,8 @@ export const useFileStore = create<FileStoreState>((set) => ({
   isRestoring: false,
 
   setWorkspacePath: (path) => set({ workspacePath: path }),
+  bumpWorkspaceRevision: () =>
+    set((state) => ({ workspaceRevision: state.workspaceRevision + 1 })),
   setFiles: (files) => set({ files }),
   setCurrentFile: (file) => set({ currentFile: file }),
   setLoading: (loading) => set({ isLoading: loading }),

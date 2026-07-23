@@ -5,6 +5,18 @@ import type {
   StorageType,
 } from "./types";
 
+export interface WorkspaceSelectionResult {
+  success: boolean;
+  canceled?: boolean;
+  workspaceName?: string;
+  error?: string;
+}
+
+export interface WorkspaceSelectionOptions {
+  // 先在用户手势中打开目录选择器，再在提交候选目录前保存旧工作区。
+  beforeCommit?: () => Promise<boolean>;
+}
+
 export interface StorageAdapter {
   readonly type: StorageType;
   readonly name: string;
@@ -20,6 +32,9 @@ export interface StorageAdapter {
   renameFile(oldPath: string, newPath: string): Promise<void>;
   exists(path: string): Promise<boolean>;
   teardown?(): Promise<void>;
+  selectWorkspace?(
+    options?: WorkspaceSelectionOptions,
+  ): Promise<WorkspaceSelectionResult>;
 
   // 可选的目录操作方法
   createFolder?(

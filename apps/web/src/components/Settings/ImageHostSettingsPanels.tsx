@@ -1,10 +1,48 @@
-import { Cloud, Image as ImageIcon, ShieldCheck, Zap } from "lucide-react";
+import {
+  CheckCircle2,
+  CircleAlert,
+  Cloud,
+  Image as ImageIcon,
+  LoaderCircle,
+  ShieldCheck,
+  Zap,
+} from "lucide-react";
 import type { ImageHostConfig } from "../../services/image/ImageUploader";
 
 export interface HostTabProps {
   activeType: ImageHostConfig["type"];
   viewingType: ImageHostConfig["type"];
   onTabChange: (type: ImageHostConfig["type"]) => void;
+}
+
+export interface HostTestResult {
+  status: "loading" | "success" | "error";
+  message: string;
+}
+
+function TestResultMessage({ result }: { result: HostTestResult }) {
+  const ResultIcon =
+    result.status === "success"
+      ? CheckCircle2
+      : result.status === "error"
+        ? CircleAlert
+        : LoaderCircle;
+
+  return (
+    <div
+      className={`test-result test-result--${result.status}`}
+      role="status"
+      aria-live="polite"
+    >
+      <ResultIcon
+        className={result.status === "loading" ? "test-result__spinner" : ""}
+        size={14}
+        strokeWidth={2}
+        aria-hidden="true"
+      />
+      <span>{result.message}</span>
+    </div>
+  );
 }
 
 export const HostTabs = ({
@@ -74,15 +112,23 @@ export const OfficialHostPanel = ({
 }: OfficialPanelProps) => {
   return (
     <div className="official-host-intro">
-      <div className="intro-header">
+      <div className="official-host-summary">
         <div className="intro-icon-wrapper">
           <Cloud size={48} strokeWidth={1.5} className="primary-icon" />
         </div>
-        <h3>官方托管服务</h3>
-        <p>专为公众号排版优化的图片托管方案</p>
+        <div className="intro-copy">
+          <h3>官方托管服务</h3>
+          <p>无需额外配置，直接用于公众号图片上传</p>
+        </div>
+        {activeType === "official" && (
+          <div className="active-status official-active-status">
+            <span className="pulsing-dot"></span>
+            <span>当前已启用官方图床</span>
+          </div>
+        )}
       </div>
 
-      <div className="feature-grid">
+      <div className="official-feature-list" aria-label="官方图床能力">
         <div className="feature-item">
           <div className="feature-icon">
             <Zap size={20} />
@@ -112,15 +158,12 @@ export const OfficialHostPanel = ({
         </div>
       </div>
 
-      {activeType === "official" ? (
-        <div className="active-status">
-          <span className="pulsing-dot"></span>
-          <span>当前已启用官方图床</span>
+      {activeType !== "official" && (
+        <div className="official-host-actions">
+          <button className="btn-activate" onClick={onActivate}>
+            启用官方图床
+          </button>
         </div>
-      ) : (
-        <button className="btn-activate" onClick={onActivate}>
-          启用官方图床
-        </button>
       )}
     </div>
   );
@@ -129,7 +172,7 @@ export const OfficialHostPanel = ({
 interface HostConfigPanelProps {
   activeType: ImageHostConfig["type"];
   viewingConfig: ImageHostConfig;
-  testResult: string | null;
+  testResult: HostTestResult | null;
   onConfigChange: (key: string, value: string) => void;
   onTestConnection: () => void;
   onActivate: (type: ImageHostConfig["type"]) => void;
@@ -217,8 +260,10 @@ export const QiniuPanel = ({
             七牛云控制台
           </a>
         </small>
-        {testResult && <div className="test-result">{testResult}</div>}
-        <button onClick={onTestConnection}>测试连接</button>
+        {testResult && <TestResultMessage result={testResult} />}
+        <button className="btn-test-connection" onClick={onTestConnection}>
+          测试连接
+        </button>
       </div>
       {activeType !== "qiniu" && (
         <button className="btn-activate" onClick={() => onActivate("qiniu")}>
@@ -297,8 +342,10 @@ export const AliyunPanel = ({
             阿里云 OSS 控制台
           </a>
         </small>
-        {testResult && <div className="test-result">{testResult}</div>}
-        <button onClick={onTestConnection}>测试连接</button>
+        {testResult && <TestResultMessage result={testResult} />}
+        <button className="btn-test-connection" onClick={onTestConnection}>
+          测试连接
+        </button>
       </div>
       {activeType !== "aliyun" && (
         <button className="btn-activate" onClick={() => onActivate("aliyun")}>
@@ -378,8 +425,10 @@ export const TencentPanel = ({
             腾讯云 COS 控制台
           </a>
         </small>
-        {testResult && <div className="test-result">{testResult}</div>}
-        <button onClick={onTestConnection}>测试连接</button>
+        {testResult && <TestResultMessage result={testResult} />}
+        <button className="btn-test-connection" onClick={onTestConnection}>
+          测试连接
+        </button>
       </div>
       {activeType !== "tencent" && (
         <button className="btn-activate" onClick={() => onActivate("tencent")}>
@@ -495,8 +544,10 @@ export const S3Panel = ({
         <small>MinIO 等自建服务需要开启此选项</small>
       </div>
       <div className="config-footer">
-        {testResult && <div className="test-result">{testResult}</div>}
-        <button onClick={onTestConnection}>测试连接</button>
+        {testResult && <TestResultMessage result={testResult} />}
+        <button className="btn-test-connection" onClick={onTestConnection}>
+          测试连接
+        </button>
       </div>
       {activeType !== "s3" && (
         <button className="btn-activate" onClick={() => onActivate("s3")}>

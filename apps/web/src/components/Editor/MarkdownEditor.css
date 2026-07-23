@@ -3,27 +3,25 @@
   flex-direction: column;
   height: 100%;
   background: var(--bg-primary);
-  /* 移除右边框，因为现在是悬浮卡片布局 */
-  border-right: none;
+  border: 0;
 }
 
 .editor-header {
-  padding: 16px 24px;
-  border-bottom: 1px solid var(--border-light);
-  background: rgba(255, 255, 255, 0.5);
-  /* 半透明背景 */
-  backdrop-filter: blur(8px);
+  min-height: 42px;
+  padding: 0 18px;
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--border-light) 72%, transparent);
+  background: var(--bg-primary);
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
 .editor-title {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.04em;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -36,7 +34,8 @@
   height: 6px;
   border-radius: 50%;
   background: var(--accent-primary);
-  box-shadow: 0 0 0 2px rgba(7, 193, 96, 0.2);
+  box-shadow: 0 0 0 2px
+    color-mix(in srgb, var(--accent-primary) 16%, transparent);
 }
 
 .editor-container {
@@ -129,9 +128,8 @@
 }
 
 .editor-container .cm-content {
-  padding: 24px 32px !important;
-  /* 增加内边距 */
-  max-width: 900px;
+  padding: 32px clamp(28px, 6vw, 56px) 72px !important;
+  max-width: 760px;
   margin: 0 auto;
 }
 
@@ -287,7 +285,7 @@
 /* === 整体优化 === */
 /* 提升可读性 */
 .editor-container .cm-content {
-  line-height: 1.75;
+  line-height: 1.85;
   color: var(--text-primary);
   font-family: var(--font-mono);
   /* 使用等宽字体 */
@@ -304,10 +302,10 @@
 
 /* === 编辑器底部状态栏 === */
 .editor-footer {
-  padding: 8px 24px;
-  border-top: 1px solid var(--border-light);
-  background: rgba(255, 255, 255, 0.5);
-  backdrop-filter: blur(8px);
+  min-height: 32px;
+  padding: 0 18px;
+  border-top: 1px solid color-mix(in srgb, var(--border-light) 70%, transparent);
+  background: var(--bg-primary);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -316,22 +314,22 @@
 .editor-stats {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
 }
 
 .editor-stat {
-  font-size: 11px;
-  color: var(--text-secondary);
+  font-size: 10px;
+  color: var(--text-tertiary);
   font-weight: 500;
   letter-spacing: 0.3px;
 }
 
 /* 保存状态指示器 */
 .save-indicator {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 500;
   letter-spacing: 0.3px;
-  padding: 4px 10px;
+  padding: 3px 8px;
   border-radius: var(--radius-pill);
   transition: all 0.2s ease;
 }
@@ -358,11 +356,11 @@
    深色模式 - 编辑器样式覆盖
    ======================================== */
 [data-ui-theme="dark"] .editor-header {
-  background: rgba(37, 37, 38, 0.8);
+  background: var(--bg-primary);
 }
 
 [data-ui-theme="dark"] .editor-footer {
-  background: rgba(37, 37, 38, 0.8);
+  background: var(--bg-primary);
 }
 
 [data-ui-theme="dark"] .workspace-guard {

@@ -28,39 +28,8 @@ import {
 } from "lucide-react";
 import { useUITheme } from "../../hooks/useUITheme";
 import { useWindowControls } from "../../hooks/useWindowControls";
+import { resolveAppAssetPath } from "../../utils/assetPath";
 import { Modal, FloatingToolbarButton } from "../common";
-
-const DefaultLogoMark = () => (
-  <svg
-    width="40"
-    height="40"
-    viewBox="0 0 200 200"
-    xmlns="http://www.w3.org/2000/svg"
-    aria-hidden="true"
-  >
-    <path
-      d="M40 20 H160 C171 20 180 29 180 40 V140 C180 151 171 160 160 160 H140 L140 185 L110 160 H40 C29 160 20 151 20 140 V40 C20 29 29 20 40 20 Z"
-      fill="#1A1A1A"
-    />
-    <rect x="50" y="50" width="100" height="12" rx="6" fill="#07C160" />
-    <path
-      d="M60 85 L60 130 H80 L80 110 L100 130 L120 110 L120 130 H140 L140 85 L120 85 L100 105 L80 85 Z"
-      fill="#FFFFFF"
-    />
-  </svg>
-);
-
-const structuralismLogoSrc = `${import.meta.env.BASE_URL}favicon-light.svg`;
-
-const StructuralismLogoMark = () => (
-  <img
-    src={structuralismLogoSrc}
-    alt="WeMD Logo"
-    width={40}
-    height={40}
-    style={{ display: "block" }}
-  />
-);
 
 const WindowControls = ({ fixed = false }: { fixed?: boolean }) => {
   const { minimize, maximize, close } = useWindowControls();
@@ -117,9 +86,10 @@ export function Header() {
   const [showImageHostModal, setShowImageHostModal] = useState(false);
   const uiTheme = useUITheme((state) => state.theme);
   const setTheme = useUITheme((state) => state.setTheme);
-  const isStructuralismUI = uiTheme === "dark";
-
   const { isElectron, isWindows, platform } = useWindowControls();
+  const logoSrc = resolveAppAssetPath(
+    uiTheme === "dark" ? "favicon-light.svg" : "favicon-dark.svg",
+  );
 
   // 自动隐藏标题栏状态
   const [autoHide, setAutoHide] = useState(() => {
@@ -213,28 +183,46 @@ export function Header() {
         style={headerStyle}
       >
         <div className="header-left">
-          <div className="logo">
-            {isStructuralismUI ? (
-              <StructuralismLogoMark />
-            ) : (
-              <DefaultLogoMark />
-            )}
-            <div className="logo-info">
-              <span className="logo-text">WeMD</span>
-              <span className="logo-subtitle">公众号 Markdown 排版编辑器</span>
-            </div>
+          <div className="logo" aria-label="WeMD 编辑器">
+            <img className="logo-mark" src={logoSrc} alt="WeMD Logo" />
+            <span className="logo-text">WeMD</span>
           </div>
+          <span className="header-divider" aria-hidden="true" />
+          <nav className="header-nav" aria-label="编辑器设置">
+            {!isElectron && (
+              <button
+                className="header-nav-button"
+                onClick={() => setShowStorageModal(true)}
+              >
+                存储模式
+              </button>
+            )}
+            <button
+              className="header-nav-button"
+              onClick={() => setShowImageHostModal(true)}
+            >
+              图床设置
+            </button>
+            <button
+              className="header-nav-button"
+              onClick={() => setShowThemePanel(true)}
+            >
+              文章主题
+            </button>
+          </nav>
         </div>
 
         <div className="header-actions">
           <div className="header-right">
             <button
-              className="btn-icon-only"
+              className="btn-icon-only header-theme-toggle"
               onClick={() => setTheme(uiTheme === "dark" ? "default" : "dark")}
               aria-label={
                 uiTheme === "dark" ? "切换到亮色模式" : "切换到暗色模式"
               }
-              title={uiTheme === "dark" ? "切换到亮色模式" : "切换到暗色模式"}
+              data-tooltip={
+                uiTheme === "dark" ? "切换到亮色模式" : "切换到暗色模式"
+              }
             >
               {uiTheme === "dark" ? (
                 <Sun size={18} strokeWidth={2} />
@@ -242,36 +230,20 @@ export function Header() {
                 <Moon size={18} strokeWidth={2} />
               )}
             </button>
-            {!isElectron && (
-              <button
-                className="btn-secondary"
-                onClick={() => setShowStorageModal(true)}
-              >
-                <Layers size={18} strokeWidth={2} />
-                <span>存储模式</span>
-              </button>
-            )}
             <button
-              className="btn-secondary"
-              onClick={() => setShowImageHostModal(true)}
+              className="btn-secondary header-action-button header-action-secondary"
+              onClick={copyAsHtml}
+              aria-label="复制 HTML"
             >
-              <ImageIcon size={18} strokeWidth={2} />
-              <span>图床设置</span>
-            </button>
-            <button
-              className="btn-secondary"
-              onClick={() => setShowThemePanel(true)}
-            >
-              <Palette size={18} strokeWidth={2} />
-              <span>主题管理</span>
-            </button>
-
-            <button className="btn-secondary" onClick={copyAsHtml}>
               <Code size={18} strokeWidth={2} />
               <span>复制 HTML</span>
             </button>
 
-            <button className="btn-primary" onClick={copyToWechat}>
+            <button
+              className="btn-primary header-action-button header-action-primary"
+              onClick={copyToWechat}
+              aria-label="复制到公众号"
+            >
               <Send size={18} strokeWidth={2} />
               <span>复制到公众号</span>
             </button>
@@ -280,7 +252,7 @@ export function Header() {
               className="btn-ghost"
               onClick={handleHideHeader}
               aria-label="隐藏标题栏"
-              title="隐藏标题栏"
+              data-tooltip="隐藏标题栏"
             >
               <ChevronsDown size={18} strokeWidth={2} />
             </button>
@@ -301,7 +273,8 @@ export function Header() {
       <Modal
         open={showStorageModal}
         onClose={() => setShowStorageModal(false)}
-        title="选择存储模式"
+        title="存储模式"
+        description="选择文章保存在浏览器中，或直接读写本地文件夹"
       >
         <Suspense
           fallback={
@@ -318,7 +291,8 @@ export function Header() {
         open={showImageHostModal}
         onClose={() => setShowImageHostModal(false)}
         title="图床设置"
-        className="modal-narrow"
+        description="选择上传服务并管理连接配置"
+        className="modal-narrow image-host-modal"
       >
         <Suspense
           fallback={

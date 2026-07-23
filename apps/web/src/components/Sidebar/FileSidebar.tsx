@@ -7,8 +7,6 @@ import {
   FolderPlus,
   MoreHorizontal,
   ChevronRight,
-  ArrowUpDown,
-  Check,
   RefreshCw,
 } from "lucide-react";
 import { SidebarFooter } from "./SidebarFooter";
@@ -22,56 +20,43 @@ import {
 import { ContextMenu } from "./ContextMenu";
 import {
   useSidebarState,
-  getBaseName,
   ROOT_DROP_TARGET,
   FILE_DRAG_TYPE,
   FOLDER_DRAG_TYPE,
 } from "./useSidebarState";
-import type { SortMode } from "./sortUtils";
+import { FileSidebarWorkspaceHeader } from "./FileSidebarWorkspaceHeader";
 import "./FileSidebar.css";
 
 import type { FileItem, FolderItem, TreeItem } from "../../store/fileTypes";
 
-const SORT_OPTIONS: { value: SortMode; label: string }[] = [
-  { value: "recent", label: "最近编辑" },
-  { value: "name-asc", label: "名称升序" },
-  { value: "name-desc", label: "名称降序" },
-];
-
 export function FileSidebar() {
   const state = useSidebarState();
   const currentThemeName = useThemeStore((s) => s.themeName);
-  const [showSortMenu, setShowSortMenu] = useState(false);
-  const sortBtnRef = useRef<HTMLButtonElement>(null);
-  const sortMenuRef = useRef<HTMLDivElement>(null);
-
-  // 右键菜单打开时关闭排序菜单
-  useEffect(() => {
-    if (state.menuOpen) setShowSortMenu(false);
-  }, [state.menuOpen]);
+  const [showSearch, setShowSearch] = useState(() => Boolean(state.filter));
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const previousWorkspaceRef = useRef({
+    path: state.workspacePath,
+    revision: state.workspaceRevision,
+  });
 
   useEffect(() => {
-    if (!showSortMenu) return;
-    const handleClick = (e: MouseEvent) => {
-      if (
-        sortMenuRef.current &&
-        !sortMenuRef.current.contains(e.target as Node) &&
-        sortBtnRef.current &&
-        !sortBtnRef.current.contains(e.target as Node)
-      ) {
-        setShowSortMenu(false);
-      }
+    const previousWorkspace = previousWorkspaceRef.current;
+    previousWorkspaceRef.current = {
+      path: state.workspacePath,
+      revision: state.workspaceRevision,
     };
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setShowSortMenu(false);
-    };
-    document.addEventListener("mousedown", handleClick);
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", handleClick);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [showSortMenu]);
+    if (
+      previousWorkspace.path !== null &&
+      (previousWorkspace.path !== state.workspacePath ||
+        previousWorkspace.revision !== state.workspaceRevision)
+    ) {
+      setShowSearch(false);
+    }
+  }, [state.workspacePath, state.workspaceRevision]);
+
+  useEffect(() => {
+    if (showSearch) searchInputRef.current?.focus();
+  }, [showSearch]);
 
   const renderFileItem = (file: FileItem) => (
     <div
@@ -204,21 +189,21 @@ export function FileSidebar() {
     );
   };
 
+  const toggleSearch = () => {
+    if (showSearch) state.setFilter("");
+    setShowSearch((visible) => !visible);
+  };
+
   return (
     <aside className="file-sidebar">
-      <div className="fs-header">
-        <div
-          className="fs-workspace-info"
-          onClick={state.selectWorkspace}
-          title={state.workspacePath || "选择工作区"}
-        >
-          <FolderOpen size={14} />
-          <span>
-            {state.workspacePath
-              ? getBaseName(state.workspacePath)
-              : "选择工作区"}
-          </span>
-        </div>
+      <button
+        className="fs-new-article-button"
+        onClick={() => state.createFile(state.activeFolder || undefined)}
+      >
+        <Plus size={18} />
+        <span>新建文章</span>
+      </button>
+      <div className="fs-quick-actions">
         <div className="fs-actions">
           <button
             className="fs-btn-secondary fs-btn-icon-only"
@@ -235,6 +220,7 @@ export function FileSidebar() {
           <button
             className="fs-btn-secondary fs-btn-icon-only"
             onClick={() => state.setShowNewFolderModal(true)}
+            aria-label="新建文件夹"
             data-tooltip="新建文件夹"
             onMouseEnter={(e) => state.showTooltip(e, "新建文件夹")}
             onMouseLeave={state.hideTooltip}
@@ -243,77 +229,48 @@ export function FileSidebar() {
           >
             <FolderPlus size={16} />
           </button>
-          <button
-            className="fs-btn-secondary fs-btn-icon-only"
-            onClick={() => state.createFile(state.activeFolder || undefined)}
-            data-tooltip={
-              state.activeFolder
-                ? `在 ${getBaseName(state.activeFolder)} 中新建`
-                : "新建文章"
-            }
-            onMouseEnter={(e) =>
-              state.showTooltip(
-                e,
-                state.activeFolder
-                  ? `在 ${getBaseName(state.activeFolder)} 中新建`
-                  : "新建文章",
-              )
-            }
-            onMouseLeave={state.hideTooltip}
-            onFocus={(e) =>
-              state.showTooltip(
-                e,
-                state.activeFolder
-                  ? `在 ${getBaseName(state.activeFolder)} 中新建`
-                  : "新建文章",
-              )
-            }
-            onBlur={state.hideTooltip}
-          >
-            <Plus size={16} />
-          </button>
         </div>
+        <button
+          className={`fs-btn-secondary fs-btn-icon-only fs-search-toggle ${showSearch ? "active" : ""}`}
+          onClick={toggleSearch}
+          aria-label={showSearch ? "收起搜索" : "搜索文件"}
+          aria-expanded={showSearch}
+          data-tooltip={showSearch ? "收起搜索" : "搜索文件"}
+          onMouseEnter={(e) =>
+            state.showTooltip(e, showSearch ? "收起搜索" : "搜索文件")
+          }
+          onMouseLeave={state.hideTooltip}
+          onFocus={(e) =>
+            state.showTooltip(e, showSearch ? "收起搜索" : "搜索文件")
+          }
+          onBlur={state.hideTooltip}
+        >
+          <Search size={16} />
+        </button>
       </div>
 
-      <div className="fs-search">
-        <div className="fs-search-wrapper">
-          <Search size={14} className="fs-search-icon" />
-          <input
-            type="text"
-            placeholder="搜索文件..."
-            value={state.filter}
-            onChange={(e) => state.setFilter(e.target.value)}
-          />
+      {showSearch && (
+        <div className="fs-search">
+          <div className="fs-search-wrapper">
+            <Search size={14} className="fs-search-icon" />
+            <input
+              ref={searchInputRef}
+              type="search"
+              aria-label="搜索文件"
+              placeholder="搜索文件..."
+              value={state.filter}
+              onChange={(e) => state.setFilter(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key !== "Escape") return;
+                state.setFilter("");
+                setShowSearch(false);
+              }}
+            />
+          </div>
         </div>
-        <div className="fs-sort-wrapper">
-          <button
-            ref={sortBtnRef}
-            className="fs-btn-secondary fs-btn-icon-only fs-sort-btn"
-            onClick={() => setShowSortMenu((v) => !v)}
-            onMouseEnter={(e) => state.showTooltip(e, "排序方式")}
-            onMouseLeave={state.hideTooltip}
-          >
-            <ArrowUpDown size={14} />
-          </button>
-          {showSortMenu && (
-            <div ref={sortMenuRef} className="fs-sort-dropdown">
-              {SORT_OPTIONS.map((opt) => (
-                <button
-                  key={opt.value}
-                  className={`fs-sort-option ${state.sortMode === opt.value ? "active" : ""}`}
-                  onClick={() => {
-                    state.handleSetSortMode(opt.value);
-                    setShowSortMenu(false);
-                  }}
-                >
-                  <span>{opt.label}</span>
-                  {state.sortMode === opt.value && <Check size={14} />}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
+      )}
+
+      <FileSidebarWorkspaceHeader state={state} />
 
       <div className="fs-body">
         <div
@@ -330,27 +287,6 @@ export function FileSidebar() {
           onDrop={state.handleDropToRoot}
           onDragLeave={(e) => state.handleDragLeave(e, ROOT_DROP_TARGET)}
         >
-          {!state.filter && (
-            <div
-              className={`fs-folder ${state.activeFolder === null ? "active" : ""} ${state.dragOverTarget === ROOT_DROP_TARGET ? "drop-target" : ""}`}
-              onClick={() => state.setActiveFolder(null)}
-              onDragOver={(e) => {
-                if (!state.isDragEnabled) return;
-                e.preventDefault();
-                e.stopPropagation();
-                state.setDragOverTarget(ROOT_DROP_TARGET);
-              }}
-              onDrop={(e) => state.handleDropToFolder(e, "")}
-              onDragLeave={(e) => state.handleDragLeave(e, ROOT_DROP_TARGET)}
-            >
-              <FolderOpen size={14} className="fs-folder-type-icon" />
-              <span className="fs-folder-name">
-                {state.workspacePath
-                  ? getBaseName(state.workspacePath)
-                  : "根目录"}
-              </span>
-            </div>
-          )}
           {state.filter
             ? (state.filteredItems as FileItem[]).map((file) =>
                 renderFileItem(file),

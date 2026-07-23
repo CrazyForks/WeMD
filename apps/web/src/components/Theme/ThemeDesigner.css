@@ -110,7 +110,7 @@
 .option-btn.active {
   background: var(--accent-primary);
   border-color: var(--accent-primary);
-  color: white;
+  color: var(--on-accent);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
@@ -229,7 +229,7 @@
 .subtab.active {
   background: var(--accent-primary);
   border-color: var(--accent-primary);
-  color: white;
+  color: var(--on-accent);
 }
 
 /* 开关行 */
@@ -396,7 +396,7 @@
   width: 100%;
   padding: 6px;
   background: var(--accent-primary);
-  color: white;
+  color: var(--on-accent);
   border: none;
   border-radius: 4px;
   cursor: pointer;
@@ -503,7 +503,7 @@
 
 .level-group .option-btn.active {
   background: var(--accent-primary);
-  color: white;
+  color: var(--on-accent);
 }
 
 /* 移除之前的无效 mini 样式 */

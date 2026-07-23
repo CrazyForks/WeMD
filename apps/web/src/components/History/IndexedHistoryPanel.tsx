@@ -8,14 +8,10 @@ import {
   MoreHorizontal,
   Edit2,
   Copy,
-  Github,
-  Globe,
-  BookOpen,
 } from "lucide-react";
 import { useEditorStore } from "../../store/editorStore";
 import { useThemeStore } from "../../store/themeStore";
 import { useHistoryStore } from "../../store/historyStore";
-import { useUITheme } from "../../hooks/useUITheme";
 import { SidebarFooter } from "../Sidebar/SidebarFooter";
 import type { HistorySnapshot } from "../../store/historyStore";
 import { resolveNewArticleThemeSnapshot } from "../../utils/newArticleTheme";
@@ -256,16 +252,16 @@ export function IndexedHistoryPanel() {
   return (
     <>
       <aside className={sidebarClass}>
+        <button
+          className="history-new-article-button"
+          onClick={handleCreateArticle}
+        >
+          <Plus size={18} />
+          <span>新建文章</span>
+        </button>
         <div className="history-header">
           <h3>历史记录</h3>
           <div className="history-actions">
-            <button
-              className="btn-secondary btn-icon-only"
-              onClick={handleCreateArticle}
-              data-tooltip="新增文章"
-            >
-              <Plus size={16} />
-            </button>
             <button
               className="btn-secondary btn-icon-only"
               onClick={() => setShowClearConfirm(true)}

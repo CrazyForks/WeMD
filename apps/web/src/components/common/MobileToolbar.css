@@ -71,7 +71,7 @@
 
 .mobile-action-btn.primary {
   background: var(--accent-gradient);
-  color: white;
+  color: var(--on-accent);
   border: none;
 }
 
