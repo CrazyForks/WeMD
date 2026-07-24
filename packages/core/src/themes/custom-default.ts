@@ -1,164 +1,109 @@
-export const customDefaultTheme = `/* 自定义样式,实时生效,浏览器实时缓存 */
-
-/* 全局属性
- * 页边距 padding: 30px;
- * 全文字体 font-family: ptima-Regular;
- * 英文换行 word-break: break-all;
+export const customDefaultTheme = `/* 默认主题 · 翡翠刊读
+ * 设计语言：深松墨承担标题层级（近黑而有绿魂），翡翠 #047857 作单一锚点强调，
+ * 每级标题使用不同版式（刊头压线 / 章节底线 / 翡翠左锚 / 字距标签）建立编辑节奏；
+ * 全程不用投影、外发光、渐变或伪元素装饰，保证复制到微信公众号后视觉稳定。
+ * 所有颜色为字面值。
  */
+
+/* 全局 */
 #wemd {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
-  color: #2c3e50;
+  color: #242a26;
   line-height: 1.8;
   font-size: 16px;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.4px;
 }
 
-/* 段落,下方未标注标签参数均同此处
- * 上边距 margin-top: 5px;
- * 下边距 margin-bottom: 5px;
- * 行高 line-height: 26px;
- * 词间距 word-spacing: 3px;
- * 字间距 letter-spacing: 3px;
- * 对齐 text-align: left;
- * 颜色 color: #3e3e3e;
- * 字体大小 font-size: 16px;
- * 首行缩进 text-indent: 2em;
- */
+/* 段落 */
 #wemd p {
-  margin: 8px 0;
+  margin: 16px 0;
   font-size: 16px;
-  color: #34495e;
+  color: #242a26;
   line-height: 1.8;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
 }
 
-/* 一级标题 */
+/* 一级标题 · 刊头：翡翠压顶线 + 左对齐大字墨题 */
 #wemd h1 {
-  font-size: 28px;
-  font-weight: 700;
-  color: #1a1a1a;
-  margin: 10px 0 20px;
-  text-align: center;
-  padding-bottom: 12px;
-  border-bottom: 2px solid #07c160;
-  letter-spacing: 1px;
+  font-size: 30px;
+  font-weight: 800;
+  color: #12241c;
+  text-align: left;
+  margin: 10px 0 28px;
+  padding-top: 18px;
+  border-top: 3px solid #047857;
+  line-height: 1.35;
+  letter-spacing: -0.3px;
 }
 
-/* 一级标题内容 */
-#wemd h1 .content {
-}
-
-/* 一级标题前缀 */
-#wemd h1 .prefix {
-}
-
-/* 一级标题后缀 */
-#wemd h1 .suffix {
-}
-
-/* 二级标题 */
+/* 二级标题 · 章节：深松墨 + 翡翠底线，形成栏目分节 */
 #wemd h2 {
   font-size: 22px;
-  font-weight: 600;
-  color: #2c3e50;
-  margin: 20px 0 14px;
-  padding-left: 12px;
-  border-left: 4px solid #07c160;
-  line-height: 1.4;
-  letter-spacing: 0.5px;
+  font-weight: 700;
+  color: #134034;
+  margin: 42px 0 16px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #cfe4d9;
+  line-height: 1.45;
+  letter-spacing: 0.2px;
 }
 
-/* 二级标题内容 */
-#wemd h2 .content {
-}
-
-/* 二级标题前缀 */
-#wemd h2 .prefix {
-}
-
-/* 二级标题后缀 */
-#wemd h2 .suffix {
-}
-
-/* 三级标题 */
+/* 三级标题 · 翡翠左锚 */
 #wemd h3 {
-  font-size: 19px;
+  font-size: 18px;
   font-weight: 600;
-  color: #34495e;
-  margin: 24px 0 12px;
-  padding-left: 10px;
-  border-left: 3px solid #07c160;
-  letter-spacing: 0.3px;
+  color: #134034;
+  margin: 30px 0 12px;
+  padding-left: 12px;
+  border-left: 3px solid #047857;
+  line-height: 1.5;
+  letter-spacing: 0.2px;
 }
 
-/* 三级标题内容 */
-#wemd h3 .content {
-}
-
-/* 三级标题前缀 */
-#wemd h3 .prefix {
-}
-
-/* 三级标题后缀 */
-#wemd h3 .suffix {
-}
-
-/* 四级标题 */
+/* 四级标题 · 翡翠字距标签 */
 #wemd h4 {
-  font-size: 17px;
-  font-weight: 600;
-  color: #07c160;
-  margin: 20px 0 10px;
-  letter-spacing: 0.3px;
-}
-
-/* 四级标题内容 */
-#wemd h4 .content {
-}
-
-/* 四级标题前缀 */
-#wemd h4 .prefix {
-}
-
-/* 四级标题后缀 */
-#wemd h4 .suffix {
+  font-size: 14px;
+  font-weight: 700;
+  color: #047857;
+  margin: 26px 0 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
 }
 
 /* 五级标题 */
 #wemd h5 {
-  font-size: 16px;
-  font-weight: 600;
-  color: #5a6c7d;
-  margin: 18px 0 8px;
-}
-
-/* 六级标题 */
-#wemd h6 {
   font-size: 15px;
   font-weight: 600;
-  color: #7f8c8d;
-  margin: 16px 0 8px;
+  color: #55605a;
+  margin: 20px 0 8px;
+  letter-spacing: 0.3px;
 }
 
-/* 无序列表整体样式
- * list-style-type: square|circle|disc;
- */
+/* 六级标题:最次级墨灰,压深至对白底 ≥ AA 4.5:1 */
+#wemd h6 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #606b64;
+  margin: 18px 0 8px;
+  letter-spacing: 0.5px;
+}
+
+/* 无序列表：翡翠符号 + 墨色内容 */
 #wemd ul {
   padding-left: 24px;
   list-style-type: disc;
-  color: #34495e;
+  color: #242a26;
 }
 
 #wemd ul li {
-  padding-left: 4px;
-  color: #07c160;
+  padding-left: 6px;
+  color: #047857;
 }
 
 #wemd ul li section {
-  color: #34495e;
+  color: #242a26;
 }
 
-/* 嵌套列表 */
 #wemd ul ul {
   list-style-type: circle;
 }
@@ -167,353 +112,297 @@ export const customDefaultTheme = `/* 自定义样式,实时生效,浏览器实�
   list-style-type: square;
 }
 
-/* 有序列表整体样式
- * list-style-type: upper-roman|lower-greek|lower-alpha;
- */
+/* 有序列表 */
 #wemd ol {
   padding-left: 24px;
   list-style-type: decimal;
-  color: #34495e;
+  color: #242a26;
 }
 
 #wemd ol li {
-  padding-left: 4px;
+  padding-left: 6px;
+  color: #047857;
 }
 
-/* 列表内容,不要设置li
- */
 #wemd li section {
-  margin: 8px 0;
+  margin: 7px 0;
   line-height: 1.8;
   font-size: 16px;
-  color: #34495e;
+  color: #242a26;
 }
 
-/* 一级引用
- * 左边缘颜色 border-left-color: black;
- * 背景色 background: gray;
- */
+/* 一级引用：翡翠左锚 + 极浅翡翠底，右侧圆角 */
 #wemd .multiquote-1 {
-  border-left: 4px solid #07c160;
-  background: #f6f8fa;
+  border-left: 3px solid #047857;
+  background: #f0f6f3;
   padding: 16px 20px;
-  margin: 20px 0;
-  color: #475569;
-  border-radius: 2px;
+  margin: 24px 0;
+  color: #3f4a44;
+  border-radius: 0 8px 8px 0;
+  box-shadow: none;
 }
 
-/* 一级引用文字 */
 #wemd .multiquote-1 p {
   margin: 0;
-  font-size: 15px;
-  color: #475569;
+  font-size: 15.5px;
+  color: #3f4a44;
   line-height: 1.8;
 }
 
-/* 二级引用
- */
+/* 二级引用（覆盖 basic 的投影） */
 #wemd .multiquote-2 {
-  border-left: 3px solid #00a854;
-  background: #fafafa;
+  border-left: 3px solid #065f46;
+  background: #f6f8f7;
   padding: 14px 18px;
-  margin: 16px 0;
-  border-radius: 2px;
+  margin: 18px 0;
+  border-radius: 0 8px 8px 0;
+  box-shadow: none;
 }
 
-/* 二级引用文字 */
 #wemd .multiquote-2 p {
   margin: 0;
   font-size: 15px;
-  color: #64748b;
-  line-height: 1.7;
+  color: #55605a;
+  line-height: 1.75;
 }
 
-/* 三级引用
- */
+/* 三级引用（覆盖 basic 的投影） */
 #wemd .multiquote-3 {
-  border-left: 2px solid #07c160;
-  background: #fafafa;
+  border-left: 2px solid #86c9ae;
+  background: #f6f8f7;
   padding: 12px 16px;
   margin: 14px 0;
-  border-radius: 2px;
+  border-radius: 0 8px 8px 0;
+  box-shadow: none;
 }
 
-/* 三级引用文字 */
 #wemd .multiquote-3 p {
   margin: 0;
   font-size: 14px;
-  color: #64748b;
+  color: #55605a;
 }
 
-/* 链接 
- * border-bottom: 1px solid #009688;
- */
+/* 链接：翡翠 + 细下划线 */
 #wemd a {
-  color: #07c160;
+  color: #047857;
   text-decoration: none;
-  border-bottom: 1px solid #07c160;
+  border-bottom: 1px solid rgba(4, 120, 87, 0.4);
   font-weight: 500;
 }
 
-/* 加粗 */
+/* 加粗：墨色强调，不染色 */
 #wemd strong {
-  font-weight: 600;
-  color: #07c160;
+  font-weight: 700;
+  color: #12241c;
   letter-spacing: 0.2px;
 }
 
-/* 斜体 */
+/* 斜体：墨色 */
 #wemd em {
   font-style: italic;
-  color: #07c160;
-  font-weight: 500;
+  color: #242a26;
 }
 
 /* 加粗斜体 */
 #wemd em strong {
   font-weight: 700;
   font-style: italic;
-  color: #00a854;
+  color: #12241c;
 }
 
 /* 删除线 */
 #wemd del {
   text-decoration: line-through;
-  color: #94a3b8;
-  opacity: 0.7;
+  color: #606b64;
 }
 
-/* 分隔线
-* 粗细、样式和颜色
-* border-top: 1px solid #3e3e3e;
-*/
+/* 分隔线 · 居中短翡翠条 */
 #wemd hr {
   border: none;
-  height: 1px;
-  background: #e2e8f0;
-  margin: 28px 0;
+  height: 2px;
+  width: 48px;
+  background: #047857;
+  margin: 34px auto;
 }
 
-/* 图片
-* 宽度 width: 80%;
-* 居中 margin: 0 auto;
-* 居左 margin: 0 0;
-*/
+/* 图片 */
 #wemd img {
   display: block;
   margin: 24px auto;
   max-width: 100%;
-  border-radius: 4px;
+  border-radius: 6px;
 }
 
-/* 图片描述文字 */
+/* 图片描述 */
 #wemd figcaption {
   text-align: center;
   font-size: 14px;
-  color: #94a3b8;
-  margin-top: 8px;
+  color: #606b64;
+  margin-top: 10px;
   letter-spacing: 0.2px;
 }
 
-/* 行内代码 */
-#wemd p code, #wemd li code {
-  background: #f0fdf4;
-  padding: 3px 6px;
-  border-radius: 3px;
-  color: #059669;
-  font-family: "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, monospace;
-  font-size: 0.9em;
-  margin: 0 3px;
-  border: 1px solid #bbf7d0;
+/* 链接图片说明：覆盖基础主题的黑底悬浮样式 */
+#wemd figure a + figcaption {
+  margin-top: 10px;
+  background: transparent;
+  color: #606b64;
+  line-height: 1.6;
 }
 
-/* 
- * 代码块不换行 display: -webkit-box !important;
- * 代码块换行 display: block;
- */
-#wemd pre code {
-  display: block;
-  background: #f8fafc;
-  padding: 16px;
+/* 行内代码：浅翡翠底 + 翡翠墨字 */
+#wemd p code, #wemd li code {
+  background: #eef6f1;
+  padding: 2px 6px;
   border-radius: 4px;
+  color: #0f5c43;
+  font-family: "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, monospace;
+  font-size: 0.88em;
+  margin: 0 2px;
+  border: 1px solid #d4e8de;
+}
+
+/* 代码块容器：中性发丝边 */
+#wemd pre code,
+#wemd pre code.hljs {
+  display: block;
+  background: #f7f9f8;
+  padding: 18px;
+  border-radius: 8px;
   overflow-x: auto;
   font-family: "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, monospace;
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: 13.5px;
+  line-height: 1.7;
   color: #334155;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #e4e9e6;
 }
 
-/*
- * 表格内的单元格
- * 字体大小 font-size: 16px;
- * 边框 border: 1px solid #ccc;
- * 内边距 padding: 5px 10px;
- */
+/* 表格 · 编辑式：去竖线，仅横向分隔，表头翡翠底线 */
+#wemd table tr {
+  border: none;
+  background-color: transparent;
+}
+
 #wemd table tr th,
 #wemd table tr td {
-  border: 1px solid #e2e8f0;
-  padding: 10px 14px;
+  border: none;
+  border-bottom: 1px solid #e4e9e6;
+  padding: 11px 14px;
   font-size: 15px;
-  color: #334155;
+  color: #242a26;
   line-height: 1.6;
+  text-align: left;
 }
 
 #wemd table tr th {
-  background: #f0fdf4;
-  color: #065f46;
-  font-weight: 600;
+  border-bottom: 2px solid #047857;
+  background: transparent;
+  color: #134034;
+  font-weight: 700;
   letter-spacing: 0.3px;
 }
 
 #wemd table tr:nth-child(2n) {
-  background-color: #f8fafc;
+  background-color: transparent;
 }
 
-/* 
- * 某一列表格列宽控制
- * n 可以修改为具体数字,不修改时表示所有列
- * 最小列宽 min-width: 85px;
- */
 #wemd table tr th:nth-of-type(n),
 #wemd table tr td:nth-of-type(n){
   min-width: 100px;
 }
 
-/* 脚注文字 */
+/* 脚注 */
 #wemd .footnote-word {
-  color: #07c160;
+  color: #047857;
   font-weight: 500;
-  border-bottom: 1px dashed #07c160;
+  border-bottom: 1px dashed rgba(4, 120, 87, 0.5);
 }
 
-/* 脚注上标 */
 #wemd .footnote-ref {
-  color: #07c160;
+  color: #047857;
   font-weight: 600;
 }
 
-/* "参考资料"四个字 
- * 内容 content: "参考资料";
- */
 #wemd .footnotes-sep:before {
   content: "参考资料";
-  font-weight: 600;
-  margin-top: 36px;
+  font-weight: 700;
+  margin-top: 38px;
   margin-bottom: 16px;
   display: block;
   font-size: 18px;
-  color: #1a1a1a;
+  color: #12241c;
   letter-spacing: 0.5px;
 }
 
-/* 参考资料编号 */
 #wemd .footnote-num {
   display: inline-block;
   width: 24px;
   text-align: right;
   margin-right: 8px;
-  color: #94a3b8;
+  color: #606b64;
   font-weight: 500;
 }
 
-/* 参考资料文字 */
-#wemd .footnote-item p { 
+#wemd .footnote-item p {
   display: inline;
   font-size: 14px;
-  color: #64748b;
+  color: #55605a;
   line-height: 1.8;
 }
 
-/* 参考资料解释 */
 #wemd .footnote-item p em {
   font-style: normal;
-  color: #94a3b8;
+  color: #606b64;
   margin-left: 6px;
 }
 
-/* 行间公式
- * 最大宽度 max-width: 300% !important;
- */
+/* 行间公式 */
 #wemd .block-equation > svg {
   display: block;
   margin: 20px auto;
   max-width: 300% !important;
 }
 
-/* 行内公式
- */
-#wemd .inline-equation > svg { 
+/* 行内公式 */
+#wemd .inline-equation > svg {
   vertical-align: middle;
 }
 
-/* Callout 提示块 */
+/* Callout 提示块：扁平化，去投影渐变；语义色左边线由 basic 提供 */
 #wemd .callout {
-  margin: 28px 0;
-  padding: 22px 24px;
-  border-radius: 22px;
-  border: 1px solid rgba(7, 193, 96, 0.15);
-  background: #ffffff;
-  box-shadow: 0 25px 45px rgba(15, 23, 42, 0.12);
-  position: relative;
-  overflow: hidden;
-}
-
-#wemd .callout::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: 22px;
-  pointer-events: none;
-  background: linear-gradient(120deg, rgba(7,193,96,0.05), rgba(7,89,193,0.03));
+  margin: 26px 0;
+  padding: 18px 20px;
+  border-radius: 12px;
+  box-shadow: none;
 }
 
 #wemd .callout-title {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-weight: 600;
-  margin-bottom: 12px;
-  color: #0f172a;
+  gap: 8px;
+  font-weight: 700;
+  margin-bottom: 10px;
+  color: #12241c;
   font-size: 16px;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.03em;
 }
 
-#wemd .callout-icon { margin-right: 8px;
-  font-size: 20px;
+#wemd .callout-icon {
+  margin-right: 8px;
+  font-size: 18px;
 }
 
-#wemd .callout-note {
-  border-color: rgba(100, 116, 255, 0.25);
-  background: linear-gradient(135deg, #f7f9ff, #edf2ff);
-}
-
+/* 提示类 callout 与主题强调色对齐，其余保持语义色 */
 #wemd .callout-tip {
-  border-color: rgba(139, 92, 246, 0.25);
-  background: linear-gradient(135deg, #f5f3ff, #ede9fe);
+  border-left-color: #047857;
+  background: #ecf6f1;
 }
 
-#wemd .callout-important {
-  border-color: rgba(14, 165, 233, 0.25);
-  background: linear-gradient(135deg, #f0f9ff, #e0f2ff);
-}
-
-#wemd .callout-warning {
-  border-color: rgba(249, 158, 0, 0.25);
-  background: linear-gradient(135deg, #fff8ed, #fff3dc);
-}
-
-#wemd .callout-caution {
-  border-color: rgba(239, 68, 68, 0.25);
-  background: linear-gradient(135deg, #fff5f5, #ffe7e7);
-}
-
-
-/* 高亮文本 */
+/* 高亮文本：柔和扁平 */
 #wemd mark {
-  background: linear-gradient(135deg, #fff9c4, #fff59d);
+  background: #f6eec6;
   color: #1a1a1a;
-  padding: 2px 4px;
+  padding: 2px 5px;
   border-radius: 3px;
   font-weight: 500;
 }
@@ -522,21 +411,20 @@ export const customDefaultTheme = `/* 自定义样式,实时生效,浏览器实�
 #wemd sup {
   font-size: 0.75em;
   vertical-align: super;
-  color: #059669;
+  color: #047857;
 }
 
 /* 下标 */
 #wemd sub {
   font-size: 0.75em;
   vertical-align: sub;
-  color: #059669;
+  color: #047857;
 }
 
-/* Imageflow CSS */
+/* Imageflow */
 #wemd .imageflow-layer1 {
   margin-top: 1em;
   margin-bottom: 0.5em;
-  /* white-space: normal; */
   border: 0px none;
   padding: 0px;
   overflow: hidden;
