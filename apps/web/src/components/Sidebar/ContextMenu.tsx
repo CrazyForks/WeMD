@@ -6,6 +6,7 @@ import {
   ChevronRight,
   MoveRight,
   FolderPlus,
+  FolderOpen,
 } from "lucide-react";
 import type { FileItem, FolderItem } from "../../store/fileTypes";
 
@@ -72,10 +73,12 @@ export function ContextMenu({
             </button>
             {showMoveMenu && (
               <div className="fs-submenu">
-                <button onClick={() => onMoveToFolder("")}>📁 根目录</button>
+                <button onClick={() => onMoveToFolder("")}>
+                  <FolderOpen size={14} /> 根目录
+                </button>
                 {allFolders.map((f) => (
                   <button key={f.path} onClick={() => onMoveToFolder(f.path)}>
-                    📁 {f.name}
+                    <FolderOpen size={14} /> {f.name}
                   </button>
                 ))}
               </div>
@@ -96,10 +99,12 @@ export function ContextMenu({
             </button>
             {showMoveMenu && (
               <div className="fs-submenu">
-                <button onClick={() => onMoveFolder("")}>📁 根目录</button>
+                <button onClick={() => onMoveFolder("")}>
+                  <FolderOpen size={14} /> 根目录
+                </button>
                 {folderMoveTargets.map((f) => (
                   <button key={f.path} onClick={() => onMoveFolder(f.path)}>
-                    📁 {f.name}
+                    <FolderOpen size={14} /> {f.name}
                   </button>
                 ))}
               </div>

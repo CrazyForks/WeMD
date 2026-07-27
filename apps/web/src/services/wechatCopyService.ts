@@ -44,7 +44,7 @@ const buildCopyCss = (themeCss: string) => {
 
 // 微信不转存 45×13 这类小尺寸 data: URI，保存草稿时会被剥离（#91），故改用托管外链。
 // Mermaid、公式等较大的 data: URI 不受此限制。
-const MAC_SIGN_IMAGE_URL = "https://img.wemd.app/1785115890455_id3wt2.png";
+const MAC_SIGN_IMAGE_URL = "https://img.wemd.app/1785143461387_dwk0yi.svg";
 
 const renderMacSignDotsToImages = (container: HTMLElement): void => {
   container.querySelectorAll<HTMLElement>(".mac-sign").forEach((macSign) => {
@@ -78,8 +78,10 @@ const renderMacSignDotsToImages = (container: HTMLElement): void => {
     image.width = width;
     image.height = height;
     image.style.display = "block";
-    image.style.width = `${width}px`;
-    image.style.height = `${height}px`;
+    image.style.setProperty("width", `${width}px`, "important");
+    image.style.setProperty("height", `${height}px`, "important");
+    image.style.setProperty("max-width", `${width}px`, "important");
+    image.style.setProperty("max-height", `${height}px`, "important");
 
     macSign.removeAttribute("aria-hidden");
     macSign.replaceChildren(image);

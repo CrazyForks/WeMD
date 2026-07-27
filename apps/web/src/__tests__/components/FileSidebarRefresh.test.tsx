@@ -179,6 +179,17 @@ describe("FileSidebar 刷新入口", () => {
     expect(sortButton.getAttribute("aria-expanded")).toBe("true");
   });
 
+  it("排序菜单只用对勾标记当前选项", () => {
+    render(<FileSidebar />);
+
+    fireEvent.click(screen.getByRole("button", { name: "排序方式" }));
+
+    const selectedOption = screen.getByRole("button", { name: "最近编辑" });
+    expect(selectedOption).toHaveClass("fs-sort-option");
+    expect(selectedOption).not.toHaveClass("active");
+    expect(selectedOption.querySelector("svg")).not.toBeNull();
+  });
+
   it("按需展开搜索并在收起时清空筛选", () => {
     render(<FileSidebar />);
 

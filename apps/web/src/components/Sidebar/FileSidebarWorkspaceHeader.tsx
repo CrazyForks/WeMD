@@ -104,7 +104,7 @@ export function FileSidebarWorkspaceHeader({
               {SORT_OPTIONS.map((option) => (
                 <button
                   key={option.value}
-                  className={`fs-sort-option ${state.sortMode === option.value ? "active" : ""}`}
+                  className="fs-sort-option"
                   onClick={() => {
                     state.handleSetSortMode(option.value);
                     setShowSortMenu(false);

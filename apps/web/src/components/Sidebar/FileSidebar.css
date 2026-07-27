@@ -249,8 +249,7 @@
   text-align: left;
 }
 
-.fs-sort-option:hover,
-.fs-sort-option.active {
+.fs-sort-option:hover {
   background: var(--bg-hover);
   color: var(--accent-primary);
 }

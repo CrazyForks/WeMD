@@ -399,7 +399,7 @@ describe("wechatCopyService clipboard strategy", () => {
     expect(mermaidParagraph?.style.color).toBe("rgb(26, 26, 26)");
   });
 
-  it("复制时将 Mac Bar 圆点转换为公众号可保留的 PNG", async () => {
+  it("复制时将 Mac Bar 圆点转换为公众号可保留的清晰远程图片", async () => {
     mocked.processHtmlMock.mockReturnValue(MAC_BAR_HTML);
 
     Object.defineProperty(window, "electron", {
@@ -435,9 +435,13 @@ describe("wechatCopyService clipboard strategy", () => {
     ) as HTMLImageElement | null;
 
     expect(image).toBeTruthy();
-    expect(image?.src).toBe("https://img.wemd.app/1785115890455_id3wt2.png");
+    expect(image?.src).toBe("https://img.wemd.app/1785143461387_dwk0yi.svg");
     expect(image?.style.width).toBe("45px");
     expect(image?.style.height).toBe("13px");
+    expect(image?.style.getPropertyPriority("width")).toBe("important");
+    expect(image?.style.getPropertyPriority("height")).toBe("important");
+    expect(image?.style.maxWidth).toBe("45px");
+    expect(image?.style.maxHeight).toBe("13px");
     expect(snapshot.querySelector(".mac-dot")).toBeNull();
     expect(payload.html).not.toContain("data:image/png");
     expect(payload.html).not.toContain("<svg");
