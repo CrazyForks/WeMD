@@ -4,12 +4,14 @@ import { ResizeHandle } from "../../components/Workspace/ResizeHandle";
 
 describe("编辑器与预览分隔条", () => {
   it("支持键盘微调和双击恢复默认宽度", () => {
-    const onRatioChange = vi.fn();
+    const onWidthChange = vi.fn();
     const onReset = vi.fn();
     render(
       <ResizeHandle
-        ratio={0.6}
-        onRatioChange={onRatioChange}
+        width={600}
+        minWidth={340}
+        maxWidth={800}
+        onWidthChange={onWidthChange}
         onPointerPosition={vi.fn()}
         onReset={onReset}
       />,
@@ -22,8 +24,9 @@ describe("编辑器与预览分隔条", () => {
     fireEvent.keyDown(separator, { key: "ArrowRight", shiftKey: true });
     fireEvent.doubleClick(separator);
 
-    expect(onRatioChange).toHaveBeenNthCalledWith(1, 0.58);
-    expect(onRatioChange).toHaveBeenNthCalledWith(2, 0.7);
+    // 默认步长 16px、Shift 步长 64px;传入的 width 每次都是当前值 600
+    expect(onWidthChange).toHaveBeenNthCalledWith(1, 584);
+    expect(onWidthChange).toHaveBeenNthCalledWith(2, 664);
     expect(onReset).toHaveBeenCalledOnce();
   });
 
@@ -32,8 +35,10 @@ describe("编辑器与预览分隔条", () => {
     const onDraggingChange = vi.fn();
     render(
       <ResizeHandle
-        ratio={0.6}
-        onRatioChange={vi.fn()}
+        width={600}
+        minWidth={340}
+        maxWidth={800}
+        onWidthChange={vi.fn()}
         onPointerPosition={onPointerPosition}
         onReset={vi.fn()}
         onDraggingChange={onDraggingChange}

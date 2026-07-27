@@ -7,43 +7,58 @@ import {
   useState,
 } from "react";
 
-const STORAGE_KEY = "wemd-editor-pane-ratio";
+const STORAGE_KEY = "wemd-editor-pane-width";
+const LEGACY_RATIO_KEY = "wemd-editor-pane-ratio";
+// 首次没有像素记录时,按容器宽度换算一次的初始占比
 const DEFAULT_RATIO = 0.58;
 const DIVIDER_WIDTH = 16;
 const MIN_EDITOR_WIDTH = 340;
 const MIN_PREVIEW_WIDTH = 402;
+// 键盘微调步长(像素),Shift 加速
+const KEYBOARD_STEP = 16;
+const KEYBOARD_STEP_LARGE = 64;
 
 const clamp = (value: number, min: number, max: number): number =>
   Math.min(Math.max(value, min), max);
 
-const getRatioBounds = (containerWidth: number) => {
-  const availableWidth = Math.max(1, containerWidth - DIVIDER_WIDTH);
-  if (availableWidth < MIN_EDITOR_WIDTH + MIN_PREVIEW_WIDTH) {
-    return { min: 0.35, max: 0.65, availableWidth };
+// 读取持久化的编辑器像素宽度;无有效像素值时返回 null,交由首帧按容器宽度换算
+const loadStoredWidth = (): number | null => {
+  try {
+    const px = Number(window.localStorage.getItem(STORAGE_KEY));
+    return Number.isFinite(px) && px > 0 ? px : null;
+  } catch {
+    return null;
   }
-  return {
-    min: MIN_EDITOR_WIDTH / availableWidth,
-    max: (availableWidth - MIN_PREVIEW_WIDTH) / availableWidth,
-    availableWidth,
-  };
 };
 
-const loadRatio = (): number => {
+// 兼容旧的比例持久化:仅在没有像素记录时用于首帧换算
+const loadLegacyRatio = (): number => {
   try {
-    const saved = Number(window.localStorage.getItem(STORAGE_KEY));
-    return Number.isFinite(saved) && saved > 0 && saved < 1
-      ? saved
+    const ratio = Number(window.localStorage.getItem(LEGACY_RATIO_KEY));
+    return Number.isFinite(ratio) && ratio > 0 && ratio < 1
+      ? ratio
       : DEFAULT_RATIO;
   } catch {
     return DEFAULT_RATIO;
   }
 };
 
+// 编辑器固定像素:下限保证可写作,上限保证预览至少保留 402px 画布
+export const getEditorWidthBounds = (containerWidth: number) => {
+  const availableWidth = Math.max(1, containerWidth - DIVIDER_WIDTH);
+  const max = Math.max(MIN_EDITOR_WIDTH, availableWidth - MIN_PREVIEW_WIDTH);
+  return { min: MIN_EDITOR_WIDTH, max, availableWidth };
+};
+
 export function useSplitPane() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [preferredRatio, setPreferredRatio] = useState(loadRatio);
+  const [preferredWidth, setPreferredWidth] = useState<number | null>(
+    loadStoredWidth,
+  );
   const [containerWidth, setContainerWidth] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+  // 旧比例只读一次,作为首帧显示与迁移换算的统一基线,避免首帧先按下限再跳变
+  const legacyRatioRef = useRef(loadLegacyRatio());
 
   useLayoutEffect(() => {
     const container = containerRef.current;
@@ -61,50 +76,90 @@ export function useSplitPane() {
     return () => observer.disconnect();
   }, []);
 
+  const bounds = useMemo(
+    () => getEditorWidthBounds(containerWidth || 1200),
+    [containerWidth],
+  );
+
+  // 首次或旧比例迁移:没有像素偏好且容器已量出时,按比例换算成像素并固化
   useEffect(() => {
+    if (preferredWidth != null) return;
+    if (!containerWidth) return;
+    const initial = legacyRatioRef.current * bounds.availableWidth;
+    setPreferredWidth(clamp(initial, bounds.min, bounds.max));
+    // 迁移完成后清理旧比例 key,避免长期残留
     try {
-      window.localStorage.setItem(STORAGE_KEY, String(preferredRatio));
+      window.localStorage.removeItem(LEGACY_RATIO_KEY);
+    } catch {
+      /* 忽略清理错误 */
+    }
+  }, [
+    preferredWidth,
+    containerWidth,
+    bounds.availableWidth,
+    bounds.min,
+    bounds.max,
+  ]);
+
+  // 持久化编辑器像素宽度
+  useEffect(() => {
+    if (preferredWidth == null) return;
+    try {
+      window.localStorage.setItem(
+        STORAGE_KEY,
+        String(Math.round(preferredWidth)),
+      );
     } catch {
       /* 忽略持久化错误 */
     }
-  }, [preferredRatio]);
+  }, [preferredWidth]);
 
-  const bounds = useMemo(
-    () => getRatioBounds(containerWidth || 1200),
-    [containerWidth],
+  // 拖外层窗口时编辑器像素宽度保持不变,仅在窗口过窄时被上限夹回以保证预览画布;
+  // 保存的偏好宽度不随窗口收缩而丢失,放大窗口后自动恢复。
+  // 迁移前(preferredWidth 尚为 null)首帧按同一旧比例换算,避免先渲染成最小宽度再跳变
+  const editorWidth = clamp(
+    preferredWidth ?? legacyRatioRef.current * bounds.availableWidth,
+    bounds.min,
+    bounds.max,
   );
-  const ratio = clamp(preferredRatio, bounds.min, bounds.max);
-  const editorWidth = ratio * bounds.availableWidth;
 
-  const setRatio = useCallback(
-    (nextRatio: number) => {
-      setPreferredRatio(clamp(nextRatio, bounds.min, bounds.max));
+  const setWidth = useCallback(
+    (nextWidth: number) => {
+      // 仅约束在容器可用范围内保存用户意图,显示时再按当前窗口夹取
+      setPreferredWidth(
+        clamp(nextWidth, MIN_EDITOR_WIDTH, bounds.availableWidth),
+      );
     },
-    [bounds.max, bounds.min],
+    [bounds.availableWidth],
   );
 
-  const setRatioFromClientX = useCallback(
+  const setWidthFromClientX = useCallback(
     (clientX: number) => {
       const container = containerRef.current;
       if (!container) return;
       const rect = container.getBoundingClientRect();
-      setRatio((clientX - rect.left) / bounds.availableWidth);
+      setWidth(clientX - rect.left);
     },
-    [bounds.availableWidth, setRatio],
+    [setWidth],
   );
 
-  const resetRatio = useCallback(() => setPreferredRatio(DEFAULT_RATIO), []);
+  const resetWidth = useCallback(() => {
+    setPreferredWidth(
+      clamp(DEFAULT_RATIO * bounds.availableWidth, bounds.min, bounds.max),
+    );
+  }, [bounds.availableWidth, bounds.min, bounds.max]);
 
   return {
     containerRef,
-    ratio,
-    minRatio: bounds.min,
-    maxRatio: bounds.max,
     editorWidth,
+    minWidth: bounds.min,
+    maxWidth: bounds.max,
+    keyboardStep: KEYBOARD_STEP,
+    keyboardStepLarge: KEYBOARD_STEP_LARGE,
     isDragging,
     setDragging: setIsDragging,
-    setRatio,
-    setRatioFromClientX,
-    resetRatio,
+    setWidth,
+    setWidthFromClientX,
+    resetWidth,
   };
 }

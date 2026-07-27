@@ -1,20 +1,24 @@
 import { useRef, type PointerEvent as ReactPointerEvent } from "react";
 
 interface ResizeHandleProps {
-  ratio: number;
-  minRatio?: number;
-  maxRatio?: number;
-  onRatioChange: (ratio: number) => void;
+  width: number;
+  minWidth: number;
+  maxWidth: number;
+  step?: number;
+  stepLarge?: number;
+  onWidthChange: (width: number) => void;
   onPointerPosition: (clientX: number) => void;
   onReset: () => void;
   onDraggingChange?: (dragging: boolean) => void;
 }
 
 export function ResizeHandle({
-  ratio,
-  minRatio = 0.35,
-  maxRatio = 0.65,
-  onRatioChange,
+  width,
+  minWidth,
+  maxWidth,
+  step = 16,
+  stepLarge = 64,
+  onWidthChange,
   onPointerPosition,
   onReset,
   onDraggingChange,
@@ -48,9 +52,9 @@ export function ResizeHandle({
       role="separator"
       aria-label="调整编辑器与预览宽度"
       aria-orientation="vertical"
-      aria-valuemin={Math.round(minRatio * 100)}
-      aria-valuemax={Math.round(maxRatio * 100)}
-      aria-valuenow={Math.round(ratio * 100)}
+      aria-valuemin={Math.round(minWidth)}
+      aria-valuemax={Math.round(maxWidth)}
+      aria-valuenow={Math.round(width)}
       tabIndex={0}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
@@ -61,8 +65,8 @@ export function ResizeHandle({
         if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
         event.preventDefault();
         const direction = event.key === "ArrowLeft" ? -1 : 1;
-        const step = event.shiftKey ? 0.1 : 0.02;
-        onRatioChange(ratio + direction * step);
+        const delta = event.shiftKey ? stepLarge : step;
+        onWidthChange(width + direction * delta);
       }}
     >
       <span className="workspace-resize-handle__line" aria-hidden="true" />

@@ -6,6 +6,12 @@
   background: color-mix(in srgb, var(--bg-page) 94%, var(--bg-secondary));
 }
 
+/* 桌面布局最小内容宽度:文件栏(256)+ 编辑器(≥340)+ 分隔条(16)+ 预览画布(≥402)+ 留白;
+   视口比它更窄时整体横向滚动,而不是让顶栏/三栏挤压重叠。移动布局不受此约束 */
+.app[data-layout-mode="desktop"] {
+  min-width: 1080px;
+}
+
 .app-main {
   --app-main-inline-padding: 28px;
   flex: 1;

@@ -26,15 +26,16 @@ export function EditorPreviewWorkspace({
   const { registerEditor, registerPreview } = useEditorPreviewScrollSync();
   const {
     containerRef,
-    ratio,
-    minRatio,
-    maxRatio,
     editorWidth,
+    minWidth,
+    maxWidth,
+    keyboardStep,
+    keyboardStepLarge,
     isDragging,
     setDragging,
-    setRatio,
-    setRatioFromClientX,
-    resetRatio,
+    setWidth,
+    setWidthFromClientX,
+    resetWidth,
   } = useSplitPane();
   const style = {
     "--editor-pane-width": `${editorWidth}px`,
@@ -55,12 +56,14 @@ export function EditorPreviewWorkspace({
         )}
       </div>
       <ResizeHandle
-        ratio={ratio}
-        minRatio={minRatio}
-        maxRatio={maxRatio}
-        onRatioChange={setRatio}
-        onPointerPosition={setRatioFromClientX}
-        onReset={resetRatio}
+        width={editorWidth}
+        minWidth={minWidth}
+        maxWidth={maxWidth}
+        step={keyboardStep}
+        stepLarge={keyboardStepLarge}
+        onWidthChange={setWidth}
+        onPointerPosition={setWidthFromClientX}
+        onReset={resetWidth}
         onDraggingChange={setDragging}
       />
       <div className="preview-pane">

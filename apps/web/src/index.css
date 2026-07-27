@@ -9,6 +9,13 @@ body,
   overflow-x: hidden;
 }
 
+/* 桌面布局有最小内容宽度,视口更窄时由 #root 整体横向滚动,
+   避免顶栏与三栏元素被挤压重叠 */
+#root {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;

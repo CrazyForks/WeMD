@@ -2,7 +2,7 @@
   --workspace-divider-width: 16px;
   display: grid;
   grid-template-columns:
-    var(--editor-pane-width, calc((100% - 16px) * 0.52))
+    var(--editor-pane-width, calc((100% - 16px) * 0.58))
     var(--workspace-divider-width)
     minmax(0, 1fr);
   gap: 0;

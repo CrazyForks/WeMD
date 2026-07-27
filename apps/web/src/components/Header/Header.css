@@ -516,33 +516,34 @@
 }
 
 @media (max-width: 768px) {
-  .app-header {
+  /* 仅真实移动布局(触屏窄屏)才收起顶栏能力;桌面浏览器拖窄窗口保持完整顶栏 */
+  .app[data-layout-mode="mobile"] .app-header {
     height: 50px;
     margin: 8px 8px 0;
     padding: 0 10px;
     top: 8px;
   }
 
-  .app-header.header-auto-hide {
+  .app[data-layout-mode="mobile"] .app-header.header-auto-hide {
     margin-top: -50px;
   }
 
-  .logo-text {
+  .app[data-layout-mode="mobile"] .logo-text {
     font-size: 0.875rem;
   }
 
-  .header-nav,
-  .header-divider {
+  .app[data-layout-mode="mobile"] .header-nav,
+  .app[data-layout-mode="mobile"] .header-divider {
     display: none;
   }
 
-  .btn-secondary,
-  .btn-primary,
-  .btn-ghost {
+  .app[data-layout-mode="mobile"] .btn-secondary,
+  .app[data-layout-mode="mobile"] .btn-primary,
+  .app[data-layout-mode="mobile"] .btn-ghost {
     display: none;
   }
 
-  .window-controls {
+  .app[data-layout-mode="mobile"] .window-controls {
     margin-right: -10px;
   }
 }
