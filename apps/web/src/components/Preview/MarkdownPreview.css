@@ -47,7 +47,7 @@
   flex-shrink: 0;
   margin: 0 auto;
   background: var(--bg-primary);
-  padding: 44px clamp(28px, 6vw, 60px) 80px;
+  padding: 44px 24px 80px;
   border-radius: 0;
   box-shadow: none;
   min-height: 100%;

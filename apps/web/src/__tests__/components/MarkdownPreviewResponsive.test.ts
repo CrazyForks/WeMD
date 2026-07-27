@@ -15,6 +15,13 @@ describe("MarkdownPreview responsive layout", () => {
     );
   });
 
+  it("桌面预览在 402px 画布中保留足够的正文宽度", () => {
+    expect(previewCss).toMatch(
+      /\.preview-content\s*\{[\s\S]*?padding:\s*44px\s+24px\s+80px;/,
+    );
+    expect(402 - 24 * 2).toBeGreaterThanOrEqual(350);
+  });
+
   it("仅移动布局使用容器宽度", () => {
     expect(previewCss).toMatch(
       /@media\s*\(max-width:\s*768px\)[\s\S]*?\.app\[data-layout-mode=["']mobile["']\]\s+\.preview-content\s*\{[\s\S]*?width:\s*100%;/,
