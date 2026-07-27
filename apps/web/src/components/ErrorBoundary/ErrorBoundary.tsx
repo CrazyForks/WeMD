@@ -1,20 +1,35 @@
-import React, { Component, type ErrorInfo, type ReactNode } from "react";
+import { Component, type ErrorInfo, type ReactNode } from "react";
+import "./ErrorBoundary.css";
 
 interface Props {
   children?: ReactNode;
 }
 
+type CopyStatus = "idle" | "copied" | "failed";
+
 interface State {
   hasError: boolean;
   error?: Error;
+  copyStatus: CopyStatus;
 }
+
+const COPY_LABEL: Record<CopyStatus, string> = {
+  idle: "复制错误信息",
+  copied: "已复制",
+  failed: "复制失败",
+};
+
+const ISSUE_URL = "https://github.com/tenngoxars/WeMD/issues/new";
 
 export class ErrorBoundary extends Component<Props, State> {
   public state: State = {
     hasError: false,
+    copyStatus: "idle",
   };
 
-  public static getDerivedStateFromError(error: Error): State {
+  private resetCopyTimer: number | undefined;
+
+  public static getDerivedStateFromError(error: Error): Partial<State> {
     return { hasError: true, error };
   }
 
@@ -22,197 +37,85 @@ export class ErrorBoundary extends Component<Props, State> {
     console.error("Uncaught error:", error, errorInfo);
   }
 
+  public componentWillUnmount() {
+    window.clearTimeout(this.resetCopyTimer);
+  }
+
+  private flashCopyStatus(status: CopyStatus) {
+    window.clearTimeout(this.resetCopyTimer);
+    this.setState({ copyStatus: status });
+    this.resetCopyTimer = window.setTimeout(
+      () => this.setState({ copyStatus: "idle" }),
+      2000,
+    );
+  }
+
+  private handleCopy = async () => {
+    const detail = this.errorDetail();
+    if (!detail || !navigator.clipboard?.writeText) {
+      this.flashCopyStatus("failed");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(detail);
+      this.flashCopyStatus("copied");
+    } catch (error) {
+      console.error("Failed to copy error:", error);
+      this.flashCopyStatus("failed");
+    }
+  };
+
+  private errorDetail(): string {
+    const { error } = this.state;
+    if (!error) return "";
+    return error.stack || error.message;
+  }
+
+  private issueUrl(): string {
+    const { error } = this.state;
+    const title = `[Crash] ${error?.message || "Unknown Error"}`;
+    const body = `**Error Message**:\n${error?.message ?? ""}\n\n**Stack Trace**:\n\`\`\`\n${error?.stack ?? ""}\n\`\`\``;
+    return `${ISSUE_URL}?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`;
+  }
+
   public render() {
-    if (this.state.hasError) {
-      return (
-        <div
-          style={{
-            height: "100vh",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            backgroundColor: "#f9fafb",
-            color: "#1a1a1a",
-            fontFamily: `-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif`,
-            padding: "20px",
-            textAlign: "center",
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: "white",
-              padding: "40px",
-              borderRadius: "16px",
-              boxShadow:
-                "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
-              maxWidth: "500px",
-              width: "100%",
-            }}
-          >
-            <h1
-              style={{
-                margin: "0 0 10px",
-                fontSize: "20px",
-                fontWeight: 600,
-                color: "#111827",
-              }}
+    if (!this.state.hasError) return this.props.children;
+
+    const detail = this.errorDetail();
+
+    return (
+      <div className="error-boundary" role="alert">
+        <div className="error-boundary-card">
+          <h1>WeMD 遇到错误</h1>
+          <p className="error-boundary-desc">
+            抱歉，编辑器运行过程中发生意外异常。
+            <br />
+            您可以复制下方错误信息进行反馈，或尝试刷新页面。
+          </p>
+
+          {detail && <pre className="error-boundary-stack">{detail}</pre>}
+
+          <div className="error-boundary-actions">
+            <button
+              className="error-boundary-btn primary"
+              onClick={() => window.location.reload()}
             >
-              WeMD 遇到错误
-            </h1>
-            <p
-              style={{
-                margin: "0 0 24px",
-                color: "#4b5563",
-                lineHeight: 1.6,
-                fontSize: "14px",
-              }}
+              重新加载
+            </button>
+            <button className="error-boundary-btn" onClick={this.handleCopy}>
+              {COPY_LABEL[this.state.copyStatus]}
+            </button>
+            <a
+              className="error-boundary-btn"
+              href={this.issueUrl()}
+              target="_blank"
+              rel="noopener noreferrer"
             >
-              抱歉，编辑器运行过程中发生意外异常。
-              <br />
-              您可以复制下方错误信息进行反馈，或尝试刷新页面。
-            </p>
-            {this.state.error && (
-              <div
-                style={{
-                  position: "relative",
-                  margin: "0 0 20px",
-                  textAlign: "left",
-                }}
-              >
-                <pre
-                  style={{
-                    backgroundColor: "#f3f4f6",
-                    padding: "12px",
-                    borderRadius: "8px",
-                    fontSize: "12px",
-                    overflow: "auto",
-                    color: "#ef4444",
-                    maxHeight: "200px",
-                    whiteSpace: "pre-wrap",
-                    wordBreak: "break-all",
-                    marginBottom: 0,
-                  }}
-                >
-                  {this.state.error.stack || this.state.error.message}
-                </pre>
-              </div>
-            )}
-            <div
-              style={{ display: "flex", gap: "12px", justifyContent: "center" }}
-            >
-              <button
-                onClick={() => window.location.reload()}
-                style={{
-                  backgroundColor: "#07c160",
-                  color: "white",
-                  border: "none",
-                  padding: "10px 24px",
-                  borderRadius: "8px",
-                  fontSize: "14px",
-                  fontWeight: 500,
-                  cursor: "pointer",
-                  transition: "background-color 0.2s",
-                }}
-                onMouseOver={(e) =>
-                  (e.currentTarget.style.backgroundColor = "#06ad56")
-                }
-                onMouseOut={(e) =>
-                  (e.currentTarget.style.backgroundColor = "#07c160")
-                }
-              >
-                重新加载
-              </button>
-              <button
-                onClick={() => {
-                  if (this.state.error) {
-                    const text =
-                      this.state.error.stack || this.state.error.message;
-                    // 安全检查：Clipboard API 是否可用
-                    if (navigator.clipboard && navigator.clipboard.writeText) {
-                      navigator.clipboard
-                        .writeText(text)
-                        .then(() => {
-                          const btn = document.getElementById("btn-copy-error");
-                          if (btn) btn.innerText = "已复制";
-                          setTimeout(() => {
-                            if (btn) btn.innerText = "复制错误信息";
-                          }, 2000);
-                        })
-                        .catch((err) => {
-                          console.error("Failed to copy error:", err);
-                          const btn = document.getElementById("btn-copy-error");
-                          if (btn) btn.innerText = "复制失败";
-                          setTimeout(() => {
-                            if (btn) btn.innerText = "复制错误信息";
-                          }, 2000);
-                        });
-                    } else {
-                      // Fallback or alert
-                      alert("无法访问剪贴板，请手动截图。");
-                    }
-                  }
-                }}
-                id="btn-copy-error"
-                style={{
-                  backgroundColor: "white",
-                  color: "#4b5563",
-                  border: "1px solid #e5e7eb",
-                  padding: "10px 24px",
-                  borderRadius: "8px",
-                  fontSize: "14px",
-                  fontWeight: 500,
-                  cursor: "pointer",
-                  transition: "all 0.2s",
-                }}
-                onMouseOver={(e) =>
-                  (e.currentTarget.style.backgroundColor = "#f9fafb")
-                }
-                onMouseOut={(e) =>
-                  (e.currentTarget.style.backgroundColor = "white")
-                }
-              >
-                复制错误信息
-              </button>
-              <a
-                href={`https://github.com/tenngoxars/WeMD/issues/new?title=${encodeURIComponent(
-                  `[Crash] ${this.state.error?.message || "Unknown Error"}`,
-                )}&body=${encodeURIComponent(
-                  `**Error Message**:\n${this.state.error?.message}\n\n**Stack Trace**:\n\`\`\`\n${
-                    this.state.error?.stack || ""
-                  }\n\`\`\``,
-                )}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  backgroundColor: "white",
-                  color: "#4b5563",
-                  border: "1px solid #e5e7eb",
-                  padding: "10px 24px",
-                  borderRadius: "8px",
-                  fontSize: "14px",
-                  fontWeight: 500,
-                  textDecoration: "none",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  transition: "all 0.2s",
-                }}
-                onMouseOver={(e) =>
-                  (e.currentTarget.style.backgroundColor = "#f9fafb")
-                }
-                onMouseOut={(e) =>
-                  (e.currentTarget.style.backgroundColor = "white")
-                }
-              >
-                去 GitHub 反馈
-              </a>
-            </div>
+              去 GitHub 反馈
+            </a>
           </div>
         </div>
-      );
-    }
-
-    return this.props.children;
+      </div>
+    );
   }
 }

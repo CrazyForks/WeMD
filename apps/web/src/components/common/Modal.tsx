@@ -3,19 +3,12 @@ import { useEffect, useId, type ReactNode } from "react";
 import "./Modal.css";
 
 interface ModalProps {
-  /** 是否显示弹窗 */
   open: boolean;
-  /** 关闭回调 */
   onClose: () => void;
-  /** 弹窗标题 */
   title: string;
-  /** 标题下方的简短说明 */
   description?: string;
-  /** 弹窗内容 */
   children: ReactNode;
-  /** 自定义类名 */
   className?: string;
-  /** 内容区域自定义类名 */
   bodyClassName?: string;
 }
 

@@ -92,9 +92,7 @@ const renderMacSignDotsToImages = (container: HTMLElement): void => {
  */
 const convertCheckboxesToEmoji = (html: string): string => {
   // 使用 &nbsp; 确保空格不被微信吞掉
-  // 先替换选中的 checkbox（包含 checked 属性）
   let result = html.replace(/<input[^>]*checked[^>]*>/gi, "✅&nbsp;");
-  // 再替换未选中的 checkbox
   result = result.replace(
     /<input[^>]*type=["']checkbox["'][^>]*>/gi,
     "⬜&nbsp;",
@@ -187,7 +185,6 @@ export async function copyToWechat(
     );
     const styledHtml = processHtml(materializedHtml, sanitizedCss, true, true);
     const resolvedHtml = resolveInlineStyleVariablesForCopy(styledHtml);
-    // 转换 checkbox 为 emoji，微信不支持 input 标签
     const finalHtml = convertCheckboxesToEmoji(resolvedHtml);
 
     container.innerHTML = finalHtml;
@@ -227,7 +224,6 @@ export async function copyToWechat(
       copied = copyViaNativeExecCommand(container);
     }
 
-    // 最后回退到 Clipboard API
     if (!copied && navigator.clipboard && window.ClipboardItem) {
       console.warn(
         "[WeMD] native execCommand copy unavailable, fallback to Clipboard API",

@@ -21,7 +21,7 @@ const KEYBOARD_STEP_LARGE = 64;
 const clamp = (value: number, min: number, max: number): number =>
   Math.min(Math.max(value, min), max);
 
-// 读取持久化的编辑器像素宽度;无有效像素值时返回 null,交由首帧按容器宽度换算
+// 无有效像素值时返回 null,交由首帧按容器宽度换算
 const loadStoredWidth = (): number | null => {
   try {
     const px = Number(window.localStorage.getItem(STORAGE_KEY));
@@ -87,7 +87,6 @@ export function useSplitPane() {
     if (!containerWidth) return;
     const initial = legacyRatioRef.current * bounds.availableWidth;
     setPreferredWidth(clamp(initial, bounds.min, bounds.max));
-    // 迁移完成后清理旧比例 key,避免长期残留
     try {
       window.localStorage.removeItem(LEGACY_RATIO_KEY);
     } catch {
@@ -101,7 +100,6 @@ export function useSplitPane() {
     bounds.max,
   ]);
 
-  // 持久化编辑器像素宽度
   useEffect(() => {
     if (preferredWidth == null) return;
     try {
