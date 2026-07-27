@@ -97,6 +97,9 @@ import { copyToWechat } from "../../services/wechatCopyService";
 const MAC_BAR_HTML =
   '<section id="wemd"><pre class="custom"><span class="mac-sign" aria-hidden="true" style="display:block;height:13px;padding:10px 14px 0;line-height:0;"><span class="mac-dot" style="display:inline-block;width:10px;height:10px;margin-top:1.5px;margin-right:7.5px;border-radius:50%;background:rgb(237,108,96);"></span><span class="mac-dot" style="display:inline-block;width:10px;height:10px;margin-top:1.5px;margin-right:7.5px;border-radius:50%;background:rgb(247,193,81);"></span><span class="mac-dot" style="display:inline-block;width:10px;height:10px;margin-top:1.5px;border-radius:50%;background:rgb(100,200,86);"></span></span><code class="hljs">const a = 1;</code></pre></section>';
 
+const MAC_BAR_HTML_WITHOUT_METRICS =
+  '<section id="wemd"><pre class="custom"><span class="mac-sign" aria-hidden="true"><span class="mac-dot"></span><span class="mac-dot"></span><span class="mac-dot"></span></span><code class="hljs">const a = 1;</code></pre></section>';
+
 type MockClipboardItemData = Record<
   string,
   string | Blob | PromiseLike<string | Blob>
@@ -168,17 +171,6 @@ describe("wechatCopyService clipboard strategy", () => {
       configurable: true,
       value: undefined,
     });
-
-    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
-      scale: vi.fn(),
-      beginPath: vi.fn(),
-      arc: vi.fn(),
-      fill: vi.fn(),
-      set fillStyle(_value: string) {},
-    } as unknown as CanvasRenderingContext2D);
-    vi.spyOn(HTMLCanvasElement.prototype, "toDataURL").mockReturnValue(
-      "data:image/png;base64,mac-sign",
-    );
   });
 
   it("prefers native execCommand copy", async () => {
@@ -443,20 +435,16 @@ describe("wechatCopyService clipboard strategy", () => {
     ) as HTMLImageElement | null;
 
     expect(image).toBeTruthy();
-    expect(image?.src).toBe("data:image/png;base64,mac-sign");
+    expect(image?.src).toBe("https://img.wemd.app/1785115890455_id3wt2.png");
     expect(image?.style.width).toBe("45px");
     expect(image?.style.height).toBe("13px");
     expect(snapshot.querySelector(".mac-dot")).toBeNull();
+    expect(payload.html).not.toContain("data:image/png");
     expect(payload.html).not.toContain("<svg");
   });
 
-  it("Mac Bar PNG 绘制失败时保留 HTML 圆点并继续复制", async () => {
-    mocked.processHtmlMock.mockReturnValue(MAC_BAR_HTML);
-    vi.spyOn(HTMLCanvasElement.prototype, "toDataURL").mockImplementationOnce(
-      () => {
-        throw new Error("canvas unavailable");
-      },
-    );
+  it("Mac Bar 圆点尺寸无法推导时保留 HTML 圆点并继续复制", async () => {
+    mocked.processHtmlMock.mockReturnValue(MAC_BAR_HTML_WITHOUT_METRICS);
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
     Object.defineProperty(window, "electron", {
@@ -481,8 +469,8 @@ describe("wechatCopyService clipboard strategy", () => {
     expect(payload.html.match(/class="mac-dot"/g)).toHaveLength(3);
     expect(payload.html).not.toContain("<img");
     expect(warnSpy).toHaveBeenCalledWith(
-      "Mac Bar PNG 绘制失败，保留 HTML 圆点",
-      expect.any(Error),
+      "Mac Bar 圆点尺寸推导失败，保留 HTML 圆点",
+      expect.objectContaining({ width: Number.NaN }),
     );
   });
 });

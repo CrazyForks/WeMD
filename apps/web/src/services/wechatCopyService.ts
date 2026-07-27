@@ -42,65 +42,47 @@ const buildCopyCss = (themeCss: string) => {
   return `${expandedCss}\n${katexCss}`;
 };
 
+// 微信不转存 45×13 这类小尺寸 data: URI，保存草稿时会被剥离（#91），故改用托管外链。
+// Mermaid、公式等较大的 data: URI 不受此限制。
+const MAC_SIGN_IMAGE_URL = "https://img.wemd.app/1785115890455_id3wt2.png";
+
 const renderMacSignDotsToImages = (container: HTMLElement): void => {
   container.querySelectorAll<HTMLElement>(".mac-sign").forEach((macSign) => {
     const dots = Array.from(macSign.querySelectorAll<HTMLElement>(".mac-dot"));
     if (dots.length === 0) return;
 
-    try {
-      const scale = 2;
-      const dotMetrics = dots.map((dot) => ({
-        color: dot.style.backgroundColor,
-        height: Number.parseFloat(dot.style.height),
-        marginRight: Number.parseFloat(dot.style.marginRight) || 0,
-        marginTop: Number.parseFloat(dot.style.marginTop) || 0,
-        width: Number.parseFloat(dot.style.width),
-      }));
-      const width = dotMetrics.reduce(
-        (total, dot) => total + dot.width + dot.marginRight,
-        0,
-      );
-      const height =
-        Number.parseFloat(macSign.style.height) ||
-        Math.max(...dotMetrics.map((dot) => dot.marginTop + dot.height));
-      if (!width || !height || dotMetrics.some((dot) => !dot.color)) return;
-
-      const canvas = document.createElement("canvas");
-      canvas.width = width * scale;
-      canvas.height = height * scale;
-      const context = canvas.getContext("2d");
-      if (!context) return;
-
-      context.scale(scale, scale);
-      let offsetX = 0;
-      dotMetrics.forEach((dot) => {
-        context.beginPath();
-        context.arc(
-          offsetX + dot.width / 2,
-          dot.marginTop + dot.height / 2,
-          Math.min(dot.width, dot.height) / 2,
-          0,
-          Math.PI * 2,
-        );
-        context.fillStyle = dot.color;
-        context.fill();
-        offsetX += dot.width + dot.marginRight;
+    const dotMetrics = dots.map((dot) => ({
+      height: Number.parseFloat(dot.style.height),
+      marginRight: Number.parseFloat(dot.style.marginRight) || 0,
+      marginTop: Number.parseFloat(dot.style.marginTop) || 0,
+      width: Number.parseFloat(dot.style.width),
+    }));
+    const width = dotMetrics.reduce(
+      (total, dot) => total + dot.width + dot.marginRight,
+      0,
+    );
+    const height =
+      Number.parseFloat(macSign.style.height) ||
+      Math.max(...dotMetrics.map((dot) => dot.marginTop + dot.height));
+    if (!width || !height) {
+      console.warn("Mac Bar 圆点尺寸推导失败，保留 HTML 圆点", {
+        height,
+        width,
       });
-
-      const image = document.createElement("img");
-      image.src = canvas.toDataURL("image/png");
-      image.alt = "";
-      image.width = width;
-      image.height = height;
-      image.style.display = "block";
-      image.style.width = `${width}px`;
-      image.style.height = `${height}px`;
-
-      macSign.removeAttribute("aria-hidden");
-      macSign.replaceChildren(image);
-    } catch (error) {
-      console.warn("Mac Bar PNG 绘制失败，保留 HTML 圆点", error);
+      return;
     }
+
+    const image = document.createElement("img");
+    image.src = MAC_SIGN_IMAGE_URL;
+    image.alt = "";
+    image.width = width;
+    image.height = height;
+    image.style.display = "block";
+    image.style.width = `${width}px`;
+    image.style.height = `${height}px`;
+
+    macSign.removeAttribute("aria-hidden");
+    macSign.replaceChildren(image);
   });
 };
 
