@@ -13,6 +13,11 @@ export interface ScrollSyncAdapter {
   subscribeLayoutChange?: (listener: () => void) => () => void;
 }
 
+export const shouldSnapToScrollEdge = (position: ScrollSyncPosition): boolean =>
+  position.sourceLine === null ||
+  position.ratio <= 0 ||
+  position.ratio >= 0.999;
+
 interface FrameScheduler {
   request: (callback: FrameRequestCallback) => number;
   cancel: (handle: number) => void;

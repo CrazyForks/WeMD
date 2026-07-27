@@ -44,4 +44,38 @@ describe("Modal", () => {
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
+
+  it("打开时圈定焦点，并在关闭后恢复触发元素", () => {
+    const trigger = document.createElement("button");
+    trigger.textContent = "打开设置";
+    document.body.appendChild(trigger);
+    trigger.focus();
+
+    const { rerender } = render(
+      <Modal open onClose={() => {}} title="图床">
+        <button>内部操作</button>
+        <button>最后操作</button>
+      </Modal>,
+    );
+
+    const closeButton = screen.getByRole("button", { name: "关闭" });
+    const lastButton = screen.getByRole("button", { name: "最后操作" });
+    expect(document.activeElement).toBe(closeButton);
+
+    lastButton.focus();
+    fireEvent.keyDown(window, { key: "Tab" });
+    expect(document.activeElement).toBe(closeButton);
+
+    trigger.focus();
+    fireEvent.keyDown(window, { key: "Tab" });
+    expect(document.activeElement).toBe(closeButton);
+
+    rerender(
+      <Modal open={false} onClose={() => {}} title="图床">
+        <button>内部操作</button>
+      </Modal>,
+    );
+    expect(document.activeElement).toBe(trigger);
+    trigger.remove();
+  });
 });

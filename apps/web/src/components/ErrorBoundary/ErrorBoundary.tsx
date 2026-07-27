@@ -5,7 +5,7 @@ interface Props {
   children?: ReactNode;
 }
 
-type CopyStatus = "idle" | "copied" | "failed";
+type CopyStatus = "idle" | "copied" | "failed" | "unavailable";
 
 interface State {
   hasError: boolean;
@@ -16,7 +16,8 @@ interface State {
 const COPY_LABEL: Record<CopyStatus, string> = {
   idle: "复制错误信息",
   copied: "已复制",
-  failed: "复制失败",
+  failed: "复制失败，请手动选中错误信息",
+  unavailable: "剪贴板不可用，请手动选中错误信息",
 };
 
 const ISSUE_URL = "https://github.com/tenngoxars/WeMD/issues/new";
@@ -53,7 +54,7 @@ export class ErrorBoundary extends Component<Props, State> {
   private handleCopy = async () => {
     const detail = this.errorDetail();
     if (!detail || !navigator.clipboard?.writeText) {
-      this.flashCopyStatus("failed");
+      this.flashCopyStatus("unavailable");
       return;
     }
     try {

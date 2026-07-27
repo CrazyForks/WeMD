@@ -24,6 +24,7 @@ import {
 } from "../../services/image/autoCompressImage";
 import { uploadEditorImage } from "../../services/image/imageUploadFlow";
 import {
+  shouldSnapToScrollEdge,
   subscribeScrollIntent,
   type ScrollSyncAdapter,
 } from "../Workspace/editorPreviewScrollSync";
@@ -203,19 +204,20 @@ export function MarkdownEditor({ onScrollSyncReady }: MarkdownEditorProps) {
     ) => {
       const max = scrollDOM.scrollHeight - scrollDOM.clientHeight;
       if (max <= 0) return;
-      if (position.ratio >= 0.999 || position.sourceLine === null) {
+      const { sourceLine } = position;
+      if (sourceLine === null || shouldSnapToScrollEdge(position)) {
         scrollDOM.scrollTo({ top: clamp(position.ratio, 0, 1) * max });
         return;
       }
 
-      const sourceLine = clamp(
-        position.sourceLine,
+      const targetSourceLine = clamp(
+        sourceLine,
         0,
         Math.max(0, view.state.doc.lines - 1),
       );
-      const lineNumber = Math.floor(sourceLine) + 1;
+      const lineNumber = Math.floor(targetSourceLine) + 1;
       const block = view.lineBlockAt(view.state.doc.line(lineNumber).from);
-      const target = block.top + (sourceLine % 1) * block.height;
+      const target = block.top + (targetSourceLine % 1) * block.height;
       scrollDOM.scrollTo({ top: clamp(target, 0, max) });
     };
 

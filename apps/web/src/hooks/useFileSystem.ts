@@ -24,6 +24,7 @@ import {
 } from "./useFileSystemHelpers";
 import { useFileSystemFolderActions } from "./useFileSystemFolderActions";
 import { useFileSystemEffects } from "./useFileSystemEffects";
+import { useActiveFilePersistence } from "./useActiveFilePersistence";
 import {
   appendMarkdownFileNameCounter,
   normalizeMarkdownFileName,
@@ -65,6 +66,11 @@ export function useFileSystem(options: UseFileSystemOptions = {}) {
   const { setMarkdown, markdown } = useEditorStore();
   const { themeId: theme, themeName } = useThemeStore();
   const isCreating = useRef<boolean>(false);
+  const fileRefreshGenerationRef = useRef(0);
+
+  const invalidateFileRefreshes = useCallback(() => {
+    fileRefreshGenerationRef.current += 1;
+  }, []);
 
   const resetActiveFile = useCallback(() => {
     setCurrentFile(null);
@@ -108,12 +114,17 @@ export function useFileSystem(options: UseFileSystemOptions = {}) {
 
   const refreshFiles = useCallback(
     async (dir?: string) => {
+      const refreshGeneration = fileRefreshGenerationRef.current;
       if (electron) {
         const target = dir || workspacePath;
         if (!target) return;
 
         const res = await electron.fs.listFiles(target);
-        if (res.success && res.files) {
+        if (
+          refreshGeneration === fileRefreshGenerationRef.current &&
+          res.success &&
+          res.files
+        ) {
           setFiles(convertToTreeItems(res.files));
         }
         return;
@@ -122,8 +133,11 @@ export function useFileSystem(options: UseFileSystemOptions = {}) {
       if (adapter && storageReady) {
         try {
           const rawFiles = await adapter.listFiles();
-          setFiles(convertAdapterFilesToTreeItems(rawFiles));
+          if (refreshGeneration === fileRefreshGenerationRef.current) {
+            setFiles(convertAdapterFilesToTreeItems(rawFiles));
+          }
         } catch (error) {
+          if (refreshGeneration !== fileRefreshGenerationRef.current) return;
           console.error("加载文件列表失败:", error);
           toast.error("无法加载文件列表");
         }
@@ -137,6 +151,7 @@ export function useFileSystem(options: UseFileSystemOptions = {}) {
     async (path: string) => {
       if (electron) {
         setLoading(true);
+        invalidateFileRefreshes();
         try {
           const res = await electron.fs.setWorkspace(path);
           if (res.success) {
@@ -158,12 +173,13 @@ export function useFileSystem(options: UseFileSystemOptions = {}) {
         return;
       }
 
+      invalidateFileRefreshes();
       setWorkspacePath(path);
       bumpWorkspaceRevision();
       await refreshFiles();
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [electron, resetActiveFile],
+    [electron, invalidateFileRefreshes, resetActiveFile],
   );
 
   const openFile = useCallback(
@@ -340,68 +356,15 @@ export function useFileSystem(options: UseFileSystemOptions = {}) {
     ],
   );
 
-  const persistActiveFile = useCallback(
-    async (showToast = false): Promise<boolean> => {
-      const activeFile = useFileStore.getState().currentFile;
-      if (!activeFile) return true;
-      setSaving(true);
-
-      const { markdown: latestMarkdown } = useEditorStore.getState();
-      const { themeId: currentTheme, themeName: currentThemeName } =
-        useThemeStore.getState();
-
-      const baseContent = useFileStore.getState().lastSavedContent;
-      const fullContent = applyMarkdownFileMeta(baseContent, {
-        body: latestMarkdown,
-        theme: currentTheme,
-        themeName: currentThemeName,
-        title: activeFile.title || stripMarkdownExtension(activeFile.name),
-      });
-
-      if (fullContent === useFileStore.getState().lastSavedContent) {
-        setSaving(false);
-        setIsDirty(false);
-        if (showToast) toast.success("内容无变化");
-        return true;
-      }
-
-      let success = false;
-      let errorMsg = "";
-
-      try {
-        if (electron) {
-          const res = await electron.fs.saveFile({
-            filePath: activeFile.path,
-            content: fullContent,
-          });
-          if (res.success) success = true;
-          else errorMsg = res.error || "Unknown error";
-        } else if (adapter && storageReady) {
-          await adapter.writeFile(activeFile.path, fullContent);
-          success = true;
-        } else {
-          errorMsg = "存储尚未就绪";
-        }
-      } catch (error: unknown) {
-        errorMsg = error instanceof Error ? error.message : String(error);
-      } finally {
-        setSaving(false);
-      }
-
-      if (success) {
-        setLastSavedContent(fullContent);
-        setLastSavedAt(new Date());
-        setIsDirty(false);
-        if (showToast) toast.success("已保存");
-        return true;
-      } else {
-        toast.error("保存失败: " + errorMsg);
-        return false;
-      }
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [electron, adapter, storageReady],
-  );
+  const persistActiveFile = useActiveFilePersistence({
+    adapter,
+    electron,
+    storageReady,
+    setIsDirty,
+    setLastSavedAt,
+    setLastSavedContent,
+    setSaving,
+  });
 
   const saveFile = useCallback(
     async (showToast = false) => {
@@ -412,18 +375,27 @@ export function useFileSystem(options: UseFileSystemOptions = {}) {
 
   const selectWorkspace = useCallback(async () => {
     if (electron) {
-      if (!(await persistActiveFile())) return;
+      setLoading(true);
+      try {
+        if (!(await persistActiveFile(false, true))) return;
 
-      const res = await electron.fs.selectWorkspace();
-      if (res.success && res.path) {
-        await loadWorkspace(res.path);
+        const res = await electron.fs.selectWorkspace();
+        if (res.success && res.path) {
+          await loadWorkspace(res.path);
+        }
+      } finally {
+        setLoading(false);
       }
       return;
     }
 
     if (storageType === "filesystem" && adapter?.selectWorkspace) {
       const selection = adapter.selectWorkspace({
-        beforeCommit: () => persistActiveFile(),
+        beforeCommit: async () => {
+          const saved = await persistActiveFile(false, true);
+          if (saved) invalidateFileRefreshes();
+          return saved;
+        },
       });
       setLoading(true);
       try {
@@ -448,6 +420,7 @@ export function useFileSystem(options: UseFileSystemOptions = {}) {
     adapter,
     bumpWorkspaceRevision,
     electron,
+    invalidateFileRefreshes,
     loadWorkspace,
     persistActiveFile,
     refreshFiles,
@@ -622,6 +595,7 @@ export function useFileSystem(options: UseFileSystemOptions = {}) {
     isRestoring,
     isDirty,
     lastSavedContent,
+    isLoading,
     loadWorkspace,
     refreshFiles,
     openFile,

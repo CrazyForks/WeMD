@@ -40,4 +40,13 @@ describe("编辑器与预览工作区", () => {
       expect(stored).toBeGreaterThanOrEqual(340);
     });
   });
+
+  it("移动布局不挂载分隔条或写入桌面分栏偏好", () => {
+    render(<EditorPreviewWorkspace loading={false} mobileView="editor" />);
+
+    expect(
+      screen.queryByRole("separator", { name: "调整编辑器与预览宽度" }),
+    ).not.toBeInTheDocument();
+    expect(localStorage.setItem).not.toHaveBeenCalled();
+  });
 });

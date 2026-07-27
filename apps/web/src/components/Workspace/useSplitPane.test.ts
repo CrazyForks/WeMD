@@ -1,4 +1,4 @@
-import { renderHook, act } from "@testing-library/react";
+import { renderHook, act, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getEditorWidthBounds, useSplitPane } from "./useSplitPane";
 
@@ -61,5 +61,43 @@ describe("useSplitPane", () => {
     const { result } = renderHook(() => useSplitPane());
     act(() => result.current.setWidth(560));
     expect(localStorage.getItem("wemd-editor-pane-width")).toBe("560");
+  });
+
+  it("禁用时不读取或写入桌面分栏偏好", () => {
+    const getItem = vi.fn(() => null);
+    const setItem = vi.fn();
+    vi.stubGlobal("localStorage", {
+      getItem,
+      setItem,
+      removeItem: vi.fn(),
+      clear: vi.fn(),
+    });
+
+    const { result } = renderHook(() => useSplitPane({ enabled: false }));
+    act(() => result.current.setWidth(560));
+
+    expect(getItem).not.toHaveBeenCalled();
+    expect(setItem).not.toHaveBeenCalled();
+  });
+
+  it("从移动布局切回桌面时读取既有桌面宽度", async () => {
+    const getItem = vi.fn((key: string) =>
+      key === "wemd-editor-pane-width" ? "560" : null,
+    );
+    vi.stubGlobal("localStorage", {
+      getItem,
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+      clear: vi.fn(),
+    });
+    const { result, rerender } = renderHook(
+      ({ enabled }) => useSplitPane({ enabled }),
+      { initialProps: { enabled: false } },
+    );
+
+    expect(getItem).not.toHaveBeenCalled();
+    rerender({ enabled: true });
+
+    await waitFor(() => expect(result.current.editorWidth).toBe(560));
   });
 });

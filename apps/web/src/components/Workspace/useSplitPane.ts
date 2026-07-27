@@ -18,6 +18,10 @@ const MIN_PREVIEW_WIDTH = 402;
 const KEYBOARD_STEP = 16;
 const KEYBOARD_STEP_LARGE = 64;
 
+interface UseSplitPaneOptions {
+  enabled?: boolean;
+}
+
 const clamp = (value: number, min: number, max: number): number =>
   Math.min(Math.max(value, min), max);
 
@@ -50,17 +54,26 @@ export const getEditorWidthBounds = (containerWidth: number) => {
   return { min: MIN_EDITOR_WIDTH, max, availableWidth };
 };
 
-export function useSplitPane() {
+export function useSplitPane({ enabled = true }: UseSplitPaneOptions = {}) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [preferredWidth, setPreferredWidth] = useState<number | null>(
-    loadStoredWidth,
+  const [preferredWidth, setPreferredWidth] = useState<number | null>(() =>
+    enabled ? loadStoredWidth() : null,
   );
   const [containerWidth, setContainerWidth] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+  const [preferenceReady, setPreferenceReady] = useState(enabled);
   // 旧比例只读一次,作为首帧显示与迁移换算的统一基线,避免首帧先按下限再跳变
-  const legacyRatioRef = useRef(loadLegacyRatio());
+  const legacyRatioRef = useRef(enabled ? loadLegacyRatio() : DEFAULT_RATIO);
+
+  useEffect(() => {
+    if (!enabled || preferenceReady) return;
+    legacyRatioRef.current = loadLegacyRatio();
+    setPreferredWidth(loadStoredWidth());
+    setPreferenceReady(true);
+  }, [enabled, preferenceReady]);
 
   useLayoutEffect(() => {
+    if (!enabled) return;
     const container = containerRef.current;
     if (!container) return;
     const updateWidth = () => setContainerWidth(container.clientWidth);
@@ -74,7 +87,7 @@ export function useSplitPane() {
     const observer = new ResizeObserver(updateWidth);
     observer.observe(container);
     return () => observer.disconnect();
-  }, []);
+  }, [enabled]);
 
   const bounds = useMemo(
     () => getEditorWidthBounds(containerWidth || 1200),
@@ -83,6 +96,7 @@ export function useSplitPane() {
 
   // 首次或旧比例迁移:没有像素偏好且容器已量出时,按比例换算成像素并固化
   useEffect(() => {
+    if (!enabled || !preferenceReady) return;
     if (preferredWidth != null) return;
     if (!containerWidth) return;
     const initial = legacyRatioRef.current * bounds.availableWidth;
@@ -98,9 +112,12 @@ export function useSplitPane() {
     bounds.availableWidth,
     bounds.min,
     bounds.max,
+    enabled,
+    preferenceReady,
   ]);
 
   useEffect(() => {
+    if (!enabled) return;
     if (preferredWidth == null) return;
     try {
       window.localStorage.setItem(
@@ -110,7 +127,7 @@ export function useSplitPane() {
     } catch {
       /* 忽略持久化错误 */
     }
-  }, [preferredWidth]);
+  }, [enabled, preferredWidth]);
 
   // 拖外层窗口时编辑器像素宽度保持不变,仅在窗口过窄时被上限夹回以保证预览画布;
   // 保存的偏好宽度不随窗口收缩而丢失,放大窗口后自动恢复。
@@ -123,12 +140,13 @@ export function useSplitPane() {
 
   const setWidth = useCallback(
     (nextWidth: number) => {
+      if (!enabled) return;
       // 仅约束在容器可用范围内保存用户意图,显示时再按当前窗口夹取
       setPreferredWidth(
         clamp(nextWidth, MIN_EDITOR_WIDTH, bounds.availableWidth),
       );
     },
-    [bounds.availableWidth],
+    [bounds.availableWidth, enabled],
   );
 
   const setWidthFromClientX = useCallback(
@@ -142,10 +160,11 @@ export function useSplitPane() {
   );
 
   const resetWidth = useCallback(() => {
+    if (!enabled) return;
     setPreferredWidth(
       clamp(DEFAULT_RATIO * bounds.availableWidth, bounds.min, bounds.max),
     );
-  }, [bounds.availableWidth, bounds.min, bounds.max]);
+  }, [bounds.availableWidth, bounds.min, bounds.max, enabled]);
 
   return {
     containerRef,

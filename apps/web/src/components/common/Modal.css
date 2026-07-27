@@ -12,7 +12,7 @@
 
 .modal-panel {
   background: var(--bg-primary);
-  border-radius: 10px;
+  border-radius: 12px;
   width: min(620px, calc(100vw - 32px));
   max-height: min(760px, calc(100vh - 32px));
   overflow: hidden;
@@ -127,7 +127,7 @@
   .modal-panel.modal-narrow {
     width: 100%;
     max-height: calc(100vh - 16px);
-    border-radius: 10px;
+    border-radius: 12px;
   }
 
   .modal-panel.image-host-modal {

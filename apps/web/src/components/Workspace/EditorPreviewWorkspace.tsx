@@ -24,6 +24,7 @@ export function EditorPreviewWorkspace({
   mobileView,
 }: EditorPreviewWorkspaceProps) {
   const { registerEditor, registerPreview } = useEditorPreviewScrollSync();
+  const isMobileLayout = mobileView !== undefined;
   const {
     containerRef,
     editorWidth,
@@ -36,10 +37,12 @@ export function EditorPreviewWorkspace({
     setWidth,
     setWidthFromClientX,
     resetWidth,
-  } = useSplitPane();
-  const style = {
-    "--editor-pane-width": `${editorWidth}px`,
-  } as CSSProperties;
+  } = useSplitPane({ enabled: !isMobileLayout });
+  const style = isMobileLayout
+    ? undefined
+    : ({
+        "--editor-pane-width": `${editorWidth}px`,
+      } as CSSProperties);
 
   return (
     <div
@@ -55,17 +58,19 @@ export function EditorPreviewWorkspace({
           <MarkdownEditor onScrollSyncReady={registerEditor} />
         )}
       </div>
-      <ResizeHandle
-        width={editorWidth}
-        minWidth={minWidth}
-        maxWidth={maxWidth}
-        step={keyboardStep}
-        stepLarge={keyboardStepLarge}
-        onWidthChange={setWidth}
-        onPointerPosition={setWidthFromClientX}
-        onReset={resetWidth}
-        onDraggingChange={setDragging}
-      />
+      {!isMobileLayout && (
+        <ResizeHandle
+          width={editorWidth}
+          minWidth={minWidth}
+          maxWidth={maxWidth}
+          step={keyboardStep}
+          stepLarge={keyboardStepLarge}
+          onWidthChange={setWidth}
+          onPointerPosition={setWidthFromClientX}
+          onReset={resetWidth}
+          onDraggingChange={setDragging}
+        />
+      )}
       <div className="preview-pane">
         {loading ? (
           <Loading />

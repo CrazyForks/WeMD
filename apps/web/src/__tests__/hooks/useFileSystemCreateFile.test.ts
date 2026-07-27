@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { renderHook, act } from "@testing-library/react";
+import { renderHook, act, waitFor } from "@testing-library/react";
 import { useFileSystem } from "../../hooks/useFileSystem";
 
 const mocks = vi.hoisted(() => {
@@ -136,6 +136,14 @@ const setElectronMock = (electron: unknown) => {
     value: electron,
     configurable: true,
   });
+};
+
+const createDeferred = <Value>() => {
+  let resolvePromise: (value: Value) => void = () => undefined;
+  const promise = new Promise<Value>((resolve) => {
+    resolvePromise = resolve;
+  });
+  return { promise, resolve: resolvePromise };
 };
 
 describe("useFileSystem 文件操作", () => {
@@ -513,5 +521,119 @@ describe("useFileSystem 文件操作", () => {
       "/new-workspace",
     );
     expect(mocks.fileStoreState.bumpWorkspaceRevision).toHaveBeenCalledTimes(1);
+  });
+
+  it("Electron 切换工作区时保存期间继续输入的最新内容", async () => {
+    const savedContent = [
+      "---",
+      "theme: default",
+      'themeName: "默认主题"',
+      'title: "草稿"',
+      "---",
+      "",
+      "# 旧内容",
+      "",
+    ].join("\n");
+    const firstSave = createDeferred<{ success: true }>();
+    let saveCount = 0;
+    const saveFile = vi.fn(
+      async (_payload: { filePath: string; content: string }) => {
+        saveCount += 1;
+        return saveCount === 1 ? firstSave.promise : { success: true };
+      },
+    );
+    const selectWorkspace = vi.fn(async () => ({
+      success: true,
+      path: "/new-workspace",
+    }));
+    const setWorkspace = vi.fn(async () => ({
+      success: true,
+      path: "/new-workspace",
+    }));
+    mocks.fileStoreSnapshot.currentFile = {
+      name: "草稿.md",
+      path: "/workspace/草稿.md",
+      title: "草稿",
+    };
+    mocks.fileStoreSnapshot.isDirty = true;
+    mocks.fileStoreSnapshot.lastSavedContent = savedContent;
+    mocks.editorStoreSnapshot.markdown = "# 开始切换时的内容\n";
+    setElectronMock({
+      fs: {
+        saveFile,
+        selectWorkspace,
+        setWorkspace,
+        listFiles: vi.fn(async () => ({ success: true, files: [] })),
+      },
+    });
+
+    const { result } = renderHook(() => useFileSystem());
+    const switching = result.current.selectWorkspace();
+
+    await waitFor(() => expect(saveFile).toHaveBeenCalledTimes(1));
+    mocks.editorStoreSnapshot.markdown = "# 保存期间继续输入的内容\n";
+
+    await act(async () => {
+      firstSave.resolve({ success: true });
+      await switching;
+    });
+
+    expect(saveFile).toHaveBeenCalledTimes(2);
+    expect(saveFile.mock.calls[1]?.[0]).toEqual(
+      expect.objectContaining({
+        filePath: "/workspace/草稿.md",
+        content: expect.stringContaining("# 保存期间继续输入的内容"),
+      }),
+    );
+    expect(saveFile.mock.invocationCallOrder[1]).toBeLessThan(
+      selectWorkspace.mock.invocationCallOrder[0],
+    );
+  });
+
+  it("工作区切换后忽略旧目录的晚到扫描结果", async () => {
+    const oldScan =
+      createDeferred<
+        Array<{ name: string; path: string; updatedAt: string }>
+      >();
+    const adapter = {
+      listFiles: vi
+        .fn()
+        .mockImplementationOnce(() => oldScan.promise)
+        .mockResolvedValueOnce([]),
+      selectWorkspace: vi.fn(
+        async (options?: { beforeCommit?: () => Promise<boolean> }) => {
+          const canCommit = (await options?.beforeCommit?.()) ?? true;
+          return canCommit
+            ? { success: true, workspaceName: "新的工作区" }
+            : { success: false, canceled: true };
+        },
+      ),
+    };
+    mocks.storageContext.adapter = adapter;
+    mocks.storageContext.ready = true;
+    mocks.storageContext.type = "filesystem";
+
+    const { result } = renderHook(() => useFileSystem());
+    const staleRefresh = result.current.refreshFiles();
+    await waitFor(() => expect(adapter.listFiles).toHaveBeenCalledTimes(1));
+
+    await act(async () => {
+      await result.current.selectWorkspace();
+    });
+    expect(adapter.listFiles).toHaveBeenCalledTimes(2);
+    mocks.fileStoreState.setFiles.mockClear();
+
+    await act(async () => {
+      oldScan.resolve([
+        {
+          name: "旧文章.md",
+          path: "旧文章.md",
+          updatedAt: "2026-07-27T00:00:00.000Z",
+        },
+      ]);
+      await staleRefresh;
+    });
+
+    expect(mocks.fileStoreState.setFiles).not.toHaveBeenCalled();
   });
 });

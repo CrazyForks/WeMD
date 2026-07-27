@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   createEditorPreviewScrollSync,
+  shouldSnapToScrollEdge,
   type ScrollSyncAdapter,
   type ScrollSyncPosition,
 } from "../../components/Workspace/editorPreviewScrollSync";
@@ -54,6 +55,15 @@ const createAdapter = (initialPosition: ScrollSyncPosition) => {
     },
   };
 };
+
+describe("滚动边界定位", () => {
+  it("首尾或缺少锚点时回退到精确滚动比例", () => {
+    expect(shouldSnapToScrollEdge({ sourceLine: 3, ratio: 0 })).toBe(true);
+    expect(shouldSnapToScrollEdge({ sourceLine: 3, ratio: 1 })).toBe(true);
+    expect(shouldSnapToScrollEdge({ sourceLine: null, ratio: 0.4 })).toBe(true);
+    expect(shouldSnapToScrollEdge({ sourceLine: 3, ratio: 0.4 })).toBe(false);
+  });
+});
 
 describe("编辑器与预览双向滚动协调", () => {
   it("在下一动画帧把主动侧源行同步到另一侧", () => {

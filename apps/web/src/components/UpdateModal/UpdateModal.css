@@ -95,13 +95,13 @@
 .update-modal-btn.primary {
   border-color: var(--accent-primary);
   background: var(--accent-primary);
-  color: #fff;
+  color: var(--on-accent, #fff);
 }
 
 .update-modal-btn.primary:hover {
   border-color: var(--accent-hover);
   background: var(--accent-hover);
-  color: #fff;
+  color: var(--on-accent, #fff);
 }
 
 .update-modal-btn.primary:active {

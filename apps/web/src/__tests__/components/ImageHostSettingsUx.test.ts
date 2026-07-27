@@ -57,6 +57,15 @@ describe("图床设置弹窗视觉与滚动约束", () => {
     );
   });
 
+  it("通用弹窗采用统一的 12px 圆角", () => {
+    expect(modalCss).toMatch(
+      /\.modal-panel\s*\{[\s\S]*?border-radius:\s*12px;/,
+    );
+    expect(modalCss).toMatch(
+      /@media \(max-width: 640px\)\s*\{[\s\S]*?\.modal-panel,[\s\S]*?border-radius:\s*12px;/,
+    );
+  });
+
   it("官方图床使用设置页结构而不是居中的营销卡片", () => {
     expect(panelSource).toContain('className="official-host-summary"');
     expect(panelSource).toContain('className="official-feature-list"');

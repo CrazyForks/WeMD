@@ -64,6 +64,7 @@ const buildParams = (
   themeName: "默认主题",
   isRestoring: false,
   isDirty: false,
+  isLoading: false,
   lastSavedContent: "",
   loadWorkspace: vi.fn(async () => {}),
   refreshFiles: vi.fn(async () => {}),
@@ -171,6 +172,30 @@ describe("useFileSystemEffects", () => {
     });
 
     expect(refreshFiles).toHaveBeenCalledTimes(1);
+  });
+
+  it("工作区切换加载中不执行聚焦刷新", async () => {
+    vi.useFakeTimers();
+    const refreshFiles = vi.fn(async () => {});
+    renderHook(() =>
+      useFileSystemEffects(
+        buildParams({
+          adapter: buildAdapterMock(),
+          storageReady: true,
+          storageType: "filesystem",
+          isLoading: true,
+          refreshFiles,
+        }),
+      ),
+    );
+    refreshFiles.mockClear();
+
+    window.dispatchEvent(new Event("focus"));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500);
+    });
+
+    expect(refreshFiles).not.toHaveBeenCalled();
   });
 
   it("浏览器文件夹模式下页面恢复可见会刷新文件列表", async () => {

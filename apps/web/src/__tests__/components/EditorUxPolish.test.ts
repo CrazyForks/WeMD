@@ -18,6 +18,14 @@ const sidebarFooterCss = readFileSync(
   "src/components/Sidebar/SidebarFooter.css",
   "utf8",
 );
+const errorBoundaryCss = readFileSync(
+  "src/components/ErrorBoundary/ErrorBoundary.css",
+  "utf8",
+);
+const updateModalCss = readFileSync(
+  "src/components/UpdateModal/UpdateModal.css",
+  "utf8",
+);
 
 const relativeLuminance = (hex: string) => {
   const channels = hex
@@ -52,6 +60,21 @@ describe("编辑器 UX 视觉校准", () => {
     expect(contrastRatio("#0b1f16", "#15966a")).toBeGreaterThanOrEqual(4.5);
     expect(contrastRatio("#949494", "#2d2d30")).toBeGreaterThanOrEqual(4.5);
     expect(appTsx).toContain('secondary: "var(--on-accent)"');
+  });
+
+  it("强调按钮始终使用主题定义的前景色", () => {
+    expect(errorBoundaryCss).toMatch(
+      /\.error-boundary-btn\.primary\s*\{[\s\S]*?color:\s*var\(--on-accent, #fff\);/,
+    );
+    expect(errorBoundaryCss).toMatch(
+      /\.error-boundary-btn\.primary:hover\s*\{[\s\S]*?color:\s*var\(--on-accent, #fff\);/,
+    );
+    expect(updateModalCss).toMatch(
+      /\.update-modal-btn\.primary\s*\{[\s\S]*?color:\s*var\(--on-accent, #fff\);/,
+    );
+    expect(updateModalCss).toMatch(
+      /\.update-modal-btn\.primary:hover\s*\{[\s\S]*?color:\s*var\(--on-accent, #fff\);/,
+    );
   });
 
   it("文件栏显隐按钮固定在窗口左侧中线", () => {

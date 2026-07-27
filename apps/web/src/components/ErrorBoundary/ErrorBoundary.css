@@ -83,13 +83,13 @@
 .error-boundary-btn.primary {
   border-color: var(--accent-primary, #047857);
   background: var(--accent-primary, #047857);
-  color: #fff;
+  color: var(--on-accent, #fff);
 }
 
 .error-boundary-btn.primary:hover {
   border-color: var(--accent-hover, #065f46);
   background: var(--accent-hover, #065f46);
-  color: #fff;
+  color: var(--on-accent, #fff);
 }
 
 .error-boundary-btn:focus-visible {

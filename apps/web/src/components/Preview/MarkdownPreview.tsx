@@ -16,6 +16,7 @@ import {
 } from "../../utils/mermaidConfig";
 import { renderTableBlocksForPreview } from "../../services/wechatTableRenderer";
 import {
+  shouldSnapToScrollEdge,
   subscribeScrollIntent,
   type ScrollSyncAdapter,
 } from "../Workspace/editorPreviewScrollSync";
@@ -214,17 +215,14 @@ export function MarkdownPreview({ onScrollSyncReady }: MarkdownPreviewProps) {
       position,
     ) => {
       const max = Math.max(0, container.scrollHeight - container.clientHeight);
-      if (
-        position.sourceLine === null ||
-        position.ratio <= 0 ||
-        position.ratio >= 0.999
-      ) {
+      const { sourceLine } = position;
+      if (sourceLine === null || shouldSnapToScrollEdge(position)) {
         container.scrollTop = Math.min(Math.max(position.ratio, 0), 1) * max;
         return;
       }
       container.scrollTop = mapSourceLineToScrollTop(
         getAnchors(),
-        position.sourceLine,
+        sourceLine,
         max,
         position.ratio,
       );
