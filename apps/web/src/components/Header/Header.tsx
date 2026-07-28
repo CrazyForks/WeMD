@@ -178,6 +178,14 @@ export function Header() {
         </div>
       )}
 
+      {/* 顶栏隐藏后桌面端需要保留窗口拖拽区；常驻挂载让高度跟随顶栏收起动画 */}
+      {isElectron && (
+        <div
+          className={`titlebar-drag-strip ${autoHide ? "is-active" : ""}`}
+          aria-hidden="true"
+        />
+      )}
+
       <header
         className={`app-header ${autoHide ? "header-auto-hide" : ""}`}
         style={headerStyle}

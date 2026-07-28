@@ -215,6 +215,38 @@ describe("Header", () => {
     ).toBeInTheDocument();
   });
 
+  it("keeps a window drag strip when the header is hidden in Electron", () => {
+    vi.mocked(useWindowControls).mockReturnValue({
+      isElectron: true,
+      isWindows: false,
+      isMac: true,
+      platform: "darwin",
+      minimize: mockMinimize,
+      maximize: mockMaximize,
+      close: mockClose,
+    });
+
+    render(<Header />);
+
+    const strip = document.querySelector(".titlebar-drag-strip");
+    expect(strip).not.toBeNull();
+    expect(strip).not.toHaveClass("is-active");
+
+    fireEvent.click(screen.getByLabelText("隐藏标题栏"));
+
+    expect(document.querySelector(".titlebar-drag-strip")).toHaveClass(
+      "is-active",
+    );
+  });
+
+  it("does not render the drag strip outside Electron", () => {
+    render(<Header />);
+
+    fireEvent.click(screen.getByLabelText("隐藏标题栏"));
+
+    expect(document.querySelector(".titlebar-drag-strip")).toBeNull();
+  });
+
   it("persists header visibility to localStorage", async () => {
     render(<Header />);
 

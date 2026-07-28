@@ -29,6 +29,20 @@
   margin-top: -54px;
 }
 
+/* 顶栏隐藏后 .app-header 这个唯一拖拽区会移出视口，桌面端必须补一条常规流内的
+   拖拽条，否则整个无边框窗口没有任何 app-region: drag，窗口就拖不动了。
+   用常规流而非 fixed：fixed 会吞掉下方内容的点击 */
+.titlebar-drag-strip {
+  flex: 0 0 0px;
+  -webkit-app-region: drag;
+  transition: flex-basis 200ms ease;
+}
+
+/* 36px 同时容下 Windows 自绘窗控(32px)与 mac 红绿灯 */
+.titlebar-drag-strip.is-active {
+  flex-basis: 36px;
+}
+
 .header-left,
 .header-actions,
 .header-right,
@@ -374,6 +388,8 @@
   flex-direction: column;
   gap: 6px;
   animation: floating-toolbar-in 220ms cubic-bezier(0.25, 1, 0.5, 1) both;
+  /* 浮动工具栏会盖在 .titlebar-drag-strip 上，不排除就会被拖拽区吞掉点击 */
+  -webkit-app-region: no-drag;
 }
 
 @keyframes floating-toolbar-in {
