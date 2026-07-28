@@ -1,241 +1,173 @@
-// 优雅的 Markdown 编辑器主题
+// 编辑器 Markdown 语法高亮
+//
+// 只描述 Markdown 结构本身的 token（标题、强调、链接、引用、列表、标记符号等）。
+// 围栏代码块内部的语言 token（keyword/string/number…）不在这里定义，交给基础主题
+// githubLight / githubDark 的 style 兜底：syntaxHighlighting 的 facet 只取第一个命中的
+// highlighter，本文件排在基础主题之前，因此 Markdown 结构完全由这里控制，语言 token 自然回落。
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { tags as t } from "@lezer/highlight";
+import { githubDarkInit, githubLightInit } from "@uiw/codemirror-theme-github";
+import { mathMarkTag, mathTag } from "./markdownMath";
 import { underlineMarkTag, underlineTag } from "./markdownUnderline";
 
-// 亮色模式高亮样式
-const lightHighlightStyle = HighlightStyle.define([
-  // 标题层次
-  {
-    tag: t.heading1,
-    fontWeight: "700",
-    fontSize: "1.75em",
-    color: "#1a202c",
-  },
-  {
-    tag: t.heading2,
-    fontWeight: "700",
-    fontSize: "1.5em",
-    color: "#2d3748",
-  },
-  {
-    tag: t.heading3,
-    fontWeight: "600",
-    fontSize: "1.25em",
-    color: "#4a5568",
-  },
-  {
-    tag: t.heading4,
-    fontWeight: "600",
-    fontSize: "1.1em",
-    color: "#4a5568",
-  },
-  {
-    tag: t.heading5,
-    fontWeight: "600",
-    color: "#718096",
-  },
-  {
-    tag: t.heading6,
-    fontWeight: "600",
-    color: "#718096",
-  },
+// 等宽字体栈只有 --font-mono 一个真源，这里不再另起一套
+const MONO_FAMILY = "var(--font-mono)";
 
-  // 强调样式
-  {
-    tag: t.emphasis,
-    fontStyle: "italic",
-    color: "#2d3748",
-  },
-  {
-    tag: t.strong,
-    fontWeight: "700",
-    color: "#1a202c",
-  },
-  {
-    tag: t.strikethrough,
-    textDecoration: "line-through",
-    color: "#a0aec0",
-  },
-  {
-    tag: underlineTag,
-    textDecoration: "underline",
-  },
-  {
-    tag: underlineMarkTag,
-    color: "#a0aec0",
-    opacity: "0.45",
-  },
+// 标题字号不在这里定义。字号写在 MarkdownEditor.css 的 .cm-md-heading-N 上，
+// 因为 `#` 标记要用 calc() 反向抵消标题缩放，两者必须共享同一个 --heading-scale。
 
-  // 链接
-  {
-    tag: t.link,
-    color: "#07c160",
-    fontWeight: "500",
-  },
-  {
-    tag: t.url,
-    color: "#38b2ac",
-  },
+interface MarkdownPalette {
+  heading: [string, string, string, string, string, string];
+  strong: string;
+  emphasis: string;
+  muted: string;
+  /** `#`、`**`、`>`、`-`、`` ` `` 等标记符号 */
+  mark: string;
+  link: string;
+  url: string;
+  label: string;
+  quote: string;
+  content: string;
+  accentSoft: string;
+  string: string;
+  math: string;
+}
 
-  // 行内代码 - 不设置 backgroundColor，让 CSS 控制，避免遮挡选中效果
-  {
-    tag: t.monospace,
-    fontFamily:
-      'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
-    color: "#e53e3e",
-    padding: "2px 5px",
-    borderRadius: "3px",
-    fontSize: "0.9em",
-  },
+// 正文刻意不压到最黑，给加粗留出可感知的色阶余量；由深到浅的层级是
+// 加粗 > 标题 > 正文 > 引用 > 注释 > 标记符号。
+const lightPalette: MarkdownPalette = {
+  heading: ["#0b1310", "#101a16", "#16221d", "#1d2b25", "#24342d", "#2b3c34"],
+  strong: "#05090a",
+  // 中文没有真斜体（PingFang 只能靠浏览器合成倾斜），单靠字形撑不起强调，
+  // 必须补一个颜色信号。冷色是调色板里唯一没被占用的色相
+  emphasis: "#3c5a72",
+  muted: "#67736c",
+  mark: "#7e8a83",
+  link: "#047857",
+  url: "#68786f",
+  label: "#0f766e",
+  quote: "#46564d",
+  content: "#37403c",
+  accentSoft: "#047857",
+  string: "#8a6236",
+  math: "#6b3fa0",
+};
 
-  // 其他
-  {
-    tag: t.meta,
-    color: "#a0aec0",
-  },
-  {
-    tag: t.comment,
-    color: "#a0aec0",
-    fontStyle: "italic",
-  },
-]);
+// 同浅色：正文不顶到最亮，把最亮留给加粗
+const darkPalette: MarkdownPalette = {
+  heading: ["#ffffff", "#f4f8f5", "#eaf0ec", "#e0e7e3", "#d8e0dc", "#d0d9d5"],
+  strong: "#ffffff",
+  emphasis: "#8fb4d0",
+  muted: "#84938b",
+  mark: "#84938b",
+  link: "#35c391",
+  url: "#8fa198",
+  label: "#4fd1a5",
+  quote: "#a3b3aa",
+  content: "#c6ccc9",
+  accentSoft: "#35c391",
+  string: "#d0a877",
+  math: "#c3a6f0",
+};
 
-// 深色模式高亮样式（参考 VS Code Dark+ 主题）
-const darkHighlightStyle = HighlightStyle.define([
-  // 标题层次 - 使用柔和的蓝色
-  {
-    tag: t.heading1,
-    fontWeight: "700",
-    fontSize: "1.75em",
-    color: "#81d4fa",
-  },
-  {
-    tag: t.heading2,
-    fontWeight: "700",
-    fontSize: "1.5em",
-    color: "#4fc3f7",
-  },
-  {
-    tag: t.heading3,
-    fontWeight: "600",
-    fontSize: "1.25em",
-    color: "#29b6f6",
-  },
-  {
-    tag: t.heading4,
-    fontWeight: "600",
-    fontSize: "1.1em",
-    color: "#29b6f6",
-  },
-  {
-    tag: t.heading5,
-    fontWeight: "600",
-    color: "#03a9f4",
-  },
-  {
-    tag: t.heading6,
-    fontWeight: "600",
-    color: "#03a9f4",
-  },
+const createMarkdownHighlightStyle = (palette: MarkdownPalette) =>
+  HighlightStyle.define([
+    // 规则顺序即优先级。lezer-markdown 用 "Blockquote/..."、"ATXHeading1/..." 这类通配把父
+    // tag 下发给所有后代，后代自身的 tag 规则和继承来的规则会同时挂在一个元素上，最终由
+    // StyleModule 的定义顺序（同特异度下的 CSS 层叠）决定谁生效。因此必须按"越通用越靠前"排：
+    // 正文兜底 → 结构 → 标记符号。
 
-  // 强调样式
-  {
-    tag: t.emphasis,
-    fontStyle: "italic",
-    color: "#b0bec5",
-  },
-  {
-    tag: t.strong,
-    fontWeight: "700",
-    color: "#f5f5f5",
-  },
-  {
-    tag: t.strikethrough,
-    textDecoration: "line-through",
-    color: "#78909c",
-  },
-  {
-    tag: underlineTag,
-    textDecoration: "underline",
-  },
-  {
-    tag: underlineMarkTag,
-    color: "#78909c",
-    opacity: "0.45",
-  },
+    // 正文兜底：Paragraph、TableCell
+    { tag: t.content, color: palette.content },
 
-  // 链接 - 使用更亮的绿色
-  {
-    tag: t.link,
-    color: "#4caf50",
-    fontWeight: "500",
-  },
-  {
-    tag: t.url,
-    color: "#4db6ac",
-  },
+    // 标题层次
+    ...[
+      t.heading1,
+      t.heading2,
+      t.heading3,
+      t.heading4,
+      t.heading5,
+      t.heading6,
+    ].map((tag, index) => ({
+      tag,
+      fontWeight: index < 2 ? "700" : "600",
+      color: palette.heading[index],
+    })),
+    // 表格表头沿用标题色，但不放大字号
+    { tag: t.heading, fontWeight: "600", color: palette.heading[1] },
 
-  // 行内代码
-  {
-    tag: t.monospace,
-    fontFamily:
-      'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
-    color: "#ce9178",
-    padding: "2px 5px",
-    borderRadius: "3px",
-    fontSize: "0.9em",
-  },
+    // 块级结构
+    { tag: t.quote, color: palette.quote, fontStyle: "italic" },
+    { tag: t.list, color: palette.content },
+    { tag: t.comment, color: palette.muted, fontStyle: "italic" },
 
-  // 其他
-  {
-    tag: t.meta,
-    color: "#78909c",
-  },
-  {
-    tag: t.comment,
-    color: "#78909c",
-    fontStyle: "italic",
-  },
-  // 表格和分隔符 - 使用亮色
-  {
-    tag: t.separator,
-    color: "#b0bec5",
-  },
-  {
-    tag: t.content,
-    color: "#d4d4d4",
-  },
-  {
-    tag: t.contentSeparator,
-    color: "#78909c",
-  },
-  // 确保普通文本可见
-  {
-    tag: t.processingInstruction,
-    color: "#d4d4d4",
-  },
-  // Emoji 短代码和特殊字符 - 使用亮色
-  {
-    tag: t.atom,
-    color: "#ce9178",
-  },
-  {
-    tag: t.special(t.string),
-    color: "#ce9178",
-  },
-  {
-    tag: t.character,
-    color: "#ce9178",
-  },
-  {
-    tag: t.escape,
-    color: "#d7ba7d",
-  },
-]);
+    // 强调
+    { tag: t.strong, fontWeight: "700", color: palette.strong },
+    { tag: t.emphasis, fontStyle: "italic", color: palette.emphasis },
+    {
+      tag: t.strikethrough,
+      textDecoration: "line-through",
+      color: palette.muted,
+    },
+    { tag: underlineTag, textDecoration: "underline" },
 
-// 导出两种模式的高亮扩展
-export const wechatMarkdownHighlighting =
-  syntaxHighlighting(lightHighlightStyle);
-export const wechatMarkdownHighlightingDark =
-  syntaxHighlighting(darkHighlightStyle);
+    // 链接与图片
+    { tag: t.link, color: palette.link, fontWeight: "500" },
+    { tag: t.url, color: palette.url },
+    { tag: t.labelName, color: palette.label },
+    { tag: t.string, color: palette.string },
+    { tag: [t.escape, t.character], color: palette.string },
+    // 公式是 WeMD 自有能力，lezer 不认识，语法由 markdownMath.ts 补上
+    { tag: mathTag, color: palette.math },
+    // 任务列表勾选框
+    { tag: t.atom, color: palette.accentSoft },
+
+    // 行内代码与代码块正文共用 t.monospace，这里只统一字体；
+    // 行内代码的底色与前景交给 editorMarkdownDecorations 的节点级装饰，
+    // 否则代码块正文会被一起染成行内代码
+    { tag: t.monospace, fontFamily: MONO_FAMILY },
+
+    // 标记符号优先级最高，压过从标题/引用/列表继承下来的颜色
+    {
+      tag: [
+        t.processingInstruction,
+        t.contentSeparator,
+        underlineMarkTag,
+        mathMarkTag,
+      ],
+      color: palette.mark,
+      fontWeight: "400",
+    },
+  ]);
+
+// 表面色、光标与选区全部走设计 token，避免第三方主题的固定配色与应用外壳脱节
+const baseSettings = {
+  background: "transparent",
+  foreground: "var(--text-primary)",
+  caret: "var(--accent-primary)",
+  selection: "color-mix(in srgb, var(--accent-primary) 20%, transparent)",
+  selectionMatch: "color-mix(in srgb, var(--accent-primary) 14%, transparent)",
+  lineHighlight: "transparent",
+  gutterBackground: "transparent",
+  gutterForeground: "var(--text-tertiary)",
+  gutterBorder: "transparent",
+};
+
+/** 基础主题只提供编辑器外壳与代码语言 token 配色 */
+export const editorBaseThemeLight = githubLightInit({ settings: baseSettings });
+
+export const editorBaseThemeDark = githubDarkInit({ settings: baseSettings });
+
+export const markdownHighlightStyleLight =
+  createMarkdownHighlightStyle(lightPalette);
+
+export const markdownHighlightStyleDark =
+  createMarkdownHighlightStyle(darkPalette);
+
+export const wechatMarkdownHighlighting = syntaxHighlighting(
+  markdownHighlightStyleLight,
+);
+
+export const wechatMarkdownHighlightingDark = syntaxHighlighting(
+  markdownHighlightStyleDark,
+);

@@ -268,6 +268,11 @@
   flex: 1;
   min-height: 200px;
   font-family: var(--font-mono);
+  /* 关掉 Maple Mono 连字，等宽场景需要逐字符可辨 */
+  font-variant-ligatures: none;
+  font-feature-settings:
+    "calt" 0,
+    "liga" 0;
   font-size: 12px;
   line-height: 1.6;
   resize: none;

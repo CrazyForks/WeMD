@@ -52,3 +52,38 @@
   src: url("/fonts/jetbrains-mono/jetbrains-mono-latin-500.woff2")
     format("woff2");
 }
+
+/* Maple Mono —— 编辑器等宽字体（OFL-1.1，见同目录 LICENSE）。
+   只打包 latin 子集，中文交给系统字体；600 由 700 兜底，粗斜体由浏览器合成。
+   连字必须在使用处关闭，否则 `<!--`、`!==` 会被合成单字形。 */
+@font-face {
+  font-family: "Maple Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/maple-mono/maple-mono-latin-regular.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Maple Mono";
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/maple-mono/maple-mono-latin-italic.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Maple Mono";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/maple-mono/maple-mono-latin-500.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Maple Mono";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/maple-mono/maple-mono-latin-700.woff2") format("woff2");
+}

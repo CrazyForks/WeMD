@@ -4,6 +4,36 @@
   height: 100%;
   background: var(--bg-primary);
   border: 0;
+
+  /* 编辑器块级装饰配色。底色一律用半透明，让下层的选区仍能透出来 */
+  --editor-code-bg: rgba(26, 28, 28, 0.035);
+  --editor-code-border: rgba(26, 28, 28, 0.09);
+  --editor-quote-bar: rgba(26, 28, 28, 0.2);
+  --editor-inline-code-bg: rgba(26, 28, 28, 0.055);
+  --editor-inline-code-fg: #b0413a;
+  --editor-list-marker: #5b6862;
+
+  /* 提示块沿用预览端的色相语言（见 packages/core themes 的 callout-*） */
+  --editor-alert-note: #6366f1;
+  --editor-alert-tip: #0f9d63;
+  --editor-alert-important: #8b5cf6;
+  --editor-alert-warning: #b3720a;
+  --editor-alert-caution: #dc2626;
+}
+
+[data-ui-theme="dark"] .markdown-editor {
+  --editor-code-bg: rgba(255, 255, 255, 0.04);
+  --editor-code-border: rgba(255, 255, 255, 0.08);
+  --editor-quote-bar: rgba(255, 255, 255, 0.22);
+  --editor-inline-code-bg: rgba(255, 255, 255, 0.08);
+  --editor-inline-code-fg: #e0a07a;
+  --editor-list-marker: #9aa8a0;
+
+  --editor-alert-note: #8b93f8;
+  --editor-alert-tip: #35c391;
+  --editor-alert-important: #b191f9;
+  --editor-alert-warning: #e0a83c;
+  --editor-alert-caution: #f27272;
 }
 
 .editor-header {
@@ -131,173 +161,177 @@
   padding: 32px clamp(28px, 6vw, 56px) 72px !important;
   max-width: 760px;
   margin: 0 auto;
-}
-
-.editor-container .cm-line {
-  padding: 0;
-}
-
-/* === Markdown 标记符号淡化 === */
-/* 标题标记 # ## ### */
-.editor-container .cm-formatting-header {
-  color: #cbd5e1 !important;
-  font-weight: 400 !important;
-  opacity: 0.6;
-}
-
-/* 强调标记 * ** *** */
-.editor-container .cm-formatting-em,
-.editor-container .cm-formatting-strong {
-  color: #cbd5e1 !important;
-  opacity: 0.6;
-}
-
-/* 链接标记 [] () */
-.editor-container .cm-formatting-link,
-.editor-container .cm-formatting-link-string {
-  color: #cbd5e1 !important;
-  opacity: 0.6;
-}
-
-/* 代码标记 ` */
-.editor-container .cm-formatting-code {
-  color: #cbd5e1 !important;
-  opacity: 0.6;
-}
-
-/* 引用标记 > */
-.editor-container .cm-formatting-quote {
-  color: #cbd5e1 !important;
-  opacity: 0.6;
-}
-
-/* 列表标记 - * 1. */
-.editor-container .cm-formatting-list {
-  color: var(--accent-primary) !important;
-  font-weight: 600 !important;
-}
-
-/* === 内容样式优化 === */
-/* 标题 */
-.editor-container .cm-header {
-  line-height: 1.5;
-  margin-top: 1.2em;
-  margin-bottom: 0.6em;
-  color: var(--text-primary);
-}
-
-/* 粗体 */
-.editor-container .cm-strong {
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-/* 斜体 */
-.editor-container .cm-em {
-  font-style: italic;
-  color: var(--text-secondary);
-}
-
-/* 链接 */
-.editor-container .cm-link {
-  color: var(--accent-primary);
-  font-weight: 500;
-  text-decoration: none;
-  border-bottom: 1px solid rgba(7, 193, 96, 0.3);
-  transition: all 0.15s ease;
-  padding-bottom: 1px;
-}
-
-.editor-container .cm-link:hover {
-  border-bottom-color: var(--accent-primary);
-  background-color: rgba(7, 193, 96, 0.08);
-  border-radius: 2px;
-}
-
-/* URL */
-.editor-container .cm-url {
-  color: #38b2ac;
-  font-size: 0.9em;
-  opacity: 0.8;
-}
-
-/* 行内代码 - 使用半透明背景让选中效果可透过 */
-.editor-container .cm-inline-code {
-  background-color: rgba(247, 250, 252, 0.7);
-  color: #e53e3e;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 0.9em;
-  font-family: var(--font-mono);
-  border: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-/* 行内代码选中状态 - 确保选中时显示选中背景色 */
-.editor-container .cm-line .cm-inline-code::selection,
-.editor-container .cm-line .cm-inline-code *::selection {
-  background-color: rgba(7, 193, 96, 0.35) !important;
-  color: inherit;
-}
-
-/* 引用块 */
-.editor-container .cm-quote {
-  color: var(--text-secondary);
-  border-left: 3px solid var(--border-color);
-  padding-left: 16px;
-  margin-left: 0;
-  font-style: italic;
-}
-
-/* 列表 */
-.editor-container .cm-list {
-  color: var(--text-primary);
-}
-
-/* === 编辑器交互优化 === */
-/* 选中文本 */
-.editor-container .cm-selectionBackground {
-  background-color: rgba(7, 193, 96, 0.15) !important;
-}
-
-/* 光标 */
-.editor-container .cm-cursor {
-  border-left: 2px solid var(--accent-primary);
-}
-
-/* 活动行 */
-.editor-container .cm-activeLine {
-  background-color: rgba(7, 193, 96, 0.03);
-  border-radius: 4px;
-}
-
-/* 行号区域 */
-.editor-container .cm-gutters {
-  background-color: transparent;
-  /* 透明背景 */
-  border-right: 1px solid transparent;
-  color: var(--text-tertiary);
-}
-
-.editor-container .cm-gutterElement {
-  padding-right: 12px !important;
-}
-
-/* === 整体优化 === */
-/* 提升可读性 */
-.editor-container .cm-content {
   line-height: 1.85;
   color: var(--text-primary);
   font-family: var(--font-mono);
-  /* 使用等宽字体 */
+  /* Maple Mono 默认开大量连字，会把 `<!--` `!==` `=>` 合成单字形。
+     这是 Markdown 源码编辑器，必须逐字符可辨，所以关掉 */
+  font-variant-ligatures: none;
+  font-feature-settings:
+    "calt" 0,
+    "liga" 0;
+  /* 等宽字体下适当收小字号 */
   font-size: 14px;
-  /* 稍微调小字号以适应等宽字体 */
   letter-spacing: 0;
 }
 
-/* 代码块背景 */
-.editor-container .cm-line.cm-code-block {
-  background-color: var(--bg-hover);
-  padding: 2px 0;
+.editor-container .cm-line {
+  padding: 0 2px;
+}
+
+/* 光标加粗，避免默认发丝线在等宽正文里过弱 */
+.editor-container .cm-cursor,
+.editor-container .cm-dropCursor {
+  border-left-width: 2px;
+}
+
+/* === Markdown 块级装饰 ===
+   token 级配色在 markdownTheme.ts；整行底色只能靠 Decoration.line，
+   类名由 editorMarkdownDecorations.ts 挂载。
+   块的左右描边要逐行铺，只有首尾行才补上下描边和圆角，拼起来才是一张完整的卡片 */
+.editor-container .cm-md-code-line {
+  --code-sides:
+    inset 1px 0 0 var(--editor-code-border),
+    inset -1px 0 0 var(--editor-code-border);
+  background: var(--editor-code-bg);
+  box-shadow: var(--code-sides);
+  padding: 0 14px;
+}
+
+.editor-container .cm-md-code-line.cm-md-block-first {
+  box-shadow:
+    var(--code-sides),
+    inset 0 1px 0 var(--editor-code-border);
+}
+
+.editor-container .cm-md-code-line.cm-md-block-last {
+  box-shadow:
+    var(--code-sides),
+    inset 0 -1px 0 var(--editor-code-border);
+}
+
+.editor-container .cm-md-code-line.cm-md-block-first.cm-md-block-last {
+  box-shadow:
+    var(--code-sides),
+    inset 0 1px 0 var(--editor-code-border),
+    inset 0 -1px 0 var(--editor-code-border);
+}
+
+/* === 标题 ===
+   字号只在这里定义，markdownTheme.ts 只管字重和颜色 */
+.editor-container .cm-md-heading-line {
+  font-size: calc(1em * var(--heading-scale));
+  /* 标题领起一节，靠上间距建立文档节奏 */
+  padding-top: var(--heading-space);
+}
+
+/* 文档首行是标题时不要多出一截顶部留白 */
+.editor-container .cm-md-heading-line:first-child {
+  padding-top: 0;
+}
+
+/* `#` 标记跟随标题字号，不做任何缩放：同一行里字号不一致会显得没对齐。
+   标记靠颜色弱化（processingInstruction 的淡色），不靠尺寸。 */
+.editor-container .cm-md-heading-1 {
+  --heading-scale: 1.5;
+  --heading-space: 22px;
+}
+
+.editor-container .cm-md-heading-2 {
+  --heading-scale: 1.32;
+  --heading-space: 18px;
+}
+
+.editor-container .cm-md-heading-3 {
+  --heading-scale: 1.18;
+  --heading-space: 15px;
+}
+
+.editor-container .cm-md-heading-4 {
+  --heading-scale: 1.08;
+  --heading-space: 13px;
+}
+
+.editor-container .cm-md-heading-5 {
+  --heading-scale: 1;
+  --heading-space: 11px;
+}
+
+.editor-container .cm-md-heading-6 {
+  --heading-scale: 0.94;
+  --heading-space: 11px;
+}
+
+/* 列表标记比其他标记更实：它表达文档结构，有序列表的数字还携带顺序信息。
+   内层还有 processingInstruction 的高亮 span，颜色要连后代一起写 */
+.editor-container .cm-md-list-marker,
+.editor-container .cm-md-list-marker span {
+  color: var(--editor-list-marker);
+  font-weight: 500;
+}
+
+/* 引用只用一条竖线表达层级，不铺底色，避免整行色块喧宾夺主 */
+.editor-container .cm-md-quote-line {
+  padding-left: 14px;
+  box-shadow: inset 2px 0 0 var(--editor-quote-bar);
+}
+
+/* 提示块按类型换色相，和右侧预览的 callout 对得上 */
+.editor-container .cm-md-alert-line {
+  padding-left: 14px;
+  background: color-mix(in srgb, var(--editor-alert-hue) 7%, transparent);
+  box-shadow: inset 2px 0 0 var(--editor-alert-hue);
+}
+
+/* 有底色的块（代码块、提示块）首尾行补上下留白和圆角，才收得住 */
+.editor-container .cm-md-code-line.cm-md-block-first,
+.editor-container .cm-md-alert-line.cm-md-block-first {
+  padding-top: 10px;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+}
+
+.editor-container .cm-md-code-line.cm-md-block-last,
+.editor-container .cm-md-alert-line.cm-md-block-last {
+  padding-bottom: 10px;
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
+}
+
+.editor-container .cm-md-alert-note {
+  --editor-alert-hue: var(--editor-alert-note);
+}
+
+.editor-container .cm-md-alert-tip {
+  --editor-alert-hue: var(--editor-alert-tip);
+}
+
+.editor-container .cm-md-alert-important {
+  --editor-alert-hue: var(--editor-alert-important);
+}
+
+.editor-container .cm-md-alert-warning {
+  --editor-alert-hue: var(--editor-alert-warning);
+}
+
+.editor-container .cm-md-alert-caution {
+  --editor-alert-hue: var(--editor-alert-caution);
+}
+
+/* `[!TIP]` 标记本身也上色。内层还有引用 token 的高亮 span，
+   必须连后代一起改写才压得住 */
+.editor-container .cm-md-alert-marker,
+.editor-container .cm-md-alert-marker span {
+  color: var(--editor-alert-hue);
+  font-weight: 600;
+  font-style: normal;
+}
+
+.editor-container .cm-md-inline-code {
+  background: var(--editor-inline-code-bg);
+  color: var(--editor-inline-code-fg);
+  border-radius: 4px;
+  padding: 1px 4px;
 }
 
 /* === 编辑器底部状态栏 === */
@@ -384,41 +418,6 @@
   color: #9d9d9d;
 }
 
-/* 编辑器内容区域 - 深色背景 */
-[data-ui-theme="dark"] .editor-container .cm-editor {
-  background: #1e1e1e;
-}
-
-/* 编辑器内容文字 - 深色模式 */
-[data-ui-theme="dark"] .editor-container .cm-content {
-  color: #d4d4d4;
-}
-
-/* 标题 - 深色模式 */
-[data-ui-theme="dark"] .editor-container .cm-header {
-  color: #e2e8f0;
-}
-
-/* 粗体 - 深色模式 */
-[data-ui-theme="dark"] .editor-container .cm-strong {
-  color: #f1f5f9;
-}
-
-/* 斜体 - 深色模式 */
-[data-ui-theme="dark"] .editor-container .cm-em {
-  color: #94a3b8;
-}
-
-/* 列表 - 深色模式 */
-[data-ui-theme="dark"] .editor-container .cm-list {
-  color: #d4d4d4;
-}
-
-/* URL - 深色模式 */
-[data-ui-theme="dark"] .editor-container .cm-url {
-  color: #4ec9b0;
-}
-
 /* 滚动条 - 深色模式 */
 [data-ui-theme="dark"] .editor-container .cm-scroller::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.15);
@@ -428,47 +427,4 @@
   .editor-container
   .cm-scroller::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.25);
-}
-
-/* Markdown 标记符号 - 深色模式 */
-[data-ui-theme="dark"] .editor-container .cm-formatting-header,
-[data-ui-theme="dark"] .editor-container .cm-formatting-em,
-[data-ui-theme="dark"] .editor-container .cm-formatting-strong,
-[data-ui-theme="dark"] .editor-container .cm-formatting-link,
-[data-ui-theme="dark"] .editor-container .cm-formatting-link-string,
-[data-ui-theme="dark"] .editor-container .cm-formatting-code,
-[data-ui-theme="dark"] .editor-container .cm-formatting-quote {
-  color: #5a5a5a !important;
-}
-
-/* 行内代码 - 深色模式 */
-[data-ui-theme="dark"] .editor-container .cm-inline-code {
-  background-color: rgba(255, 255, 255, 0.08);
-  color: #ce9178;
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-/* 引用块边框 - 深色模式 */
-[data-ui-theme="dark"] .editor-container .cm-quote {
-  border-left-color: #4a4a4a;
-}
-
-/* 活动行 - 深色模式 */
-[data-ui-theme="dark"] .editor-container .cm-activeLine {
-  background-color: rgba(255, 255, 255, 0.03);
-}
-
-/* 选中文本 - 深色模式 */
-[data-ui-theme="dark"] .editor-container .cm-selectionBackground {
-  background-color: rgba(7, 193, 96, 0.25) !important;
-}
-
-/* 代码块背景 - 深色模式 */
-[data-ui-theme="dark"] .editor-container .cm-line.cm-code-block {
-  background-color: rgba(255, 255, 255, 0.05);
-}
-
-/* 通用回退 - 确保所有文本可见 */
-[data-ui-theme="dark"] .editor-container .cm-line {
-  color: #d4d4d4;
 }

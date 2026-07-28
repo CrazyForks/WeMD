@@ -1,12 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { EditorView, minimalSetup } from "codemirror";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
+import { languages } from "@codemirror/language-data";
 import { EditorState } from "@codemirror/state";
-import { githubLight } from "@uiw/codemirror-theme-github";
 import {
+  editorBaseThemeDark,
+  editorBaseThemeLight,
   wechatMarkdownHighlighting,
   wechatMarkdownHighlightingDark,
 } from "./markdownTheme";
+import { markdownBlockDecorations } from "./editorMarkdownDecorations";
+import { mathExtension } from "./markdownMath";
 import { underlineExtension } from "./markdownUnderline";
 import { useUITheme } from "../../hooks/useUITheme";
 import { useEditorStore } from "../../store/editorStore";
@@ -66,11 +70,16 @@ export function MarkdownEditor({ onScrollSyncReady }: MarkdownEditorProps) {
       extensions: [
         minimalSetup,
         customKeymap,
-        markdown({ base: markdownLanguage, extensions: [underlineExtension] }),
+        markdown({
+          base: markdownLanguage,
+          // 围栏代码块按语言懒加载高亮，Vite 会把各语言拆成独立 chunk
+          codeLanguages: languages,
+          extensions: [underlineExtension, mathExtension],
+        }),
         uiTheme === "dark"
-          ? wechatMarkdownHighlightingDark
-          : wechatMarkdownHighlighting,
-        githubLight,
+          ? [wechatMarkdownHighlightingDark, editorBaseThemeDark]
+          : [wechatMarkdownHighlighting, editorBaseThemeLight],
+        markdownBlockDecorations,
         EditorView.lineWrapping,
         paragraphSelectionStyle,
         EditorView.domEventHandlers({
@@ -162,19 +171,9 @@ export function MarkdownEditor({ onScrollSyncReady }: MarkdownEditorProps) {
         EditorView.theme({
           "&": {
             height: "100%",
-            fontSize: "15px",
           },
           ".cm-scroller": {
-            fontFamily:
-              "'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace",
-            lineHeight: "1.6",
-          },
-          ".cm-content": {
-            padding: "16px",
-          },
-          ".cm-gutters": {
-            backgroundColor: "#f8f9fa",
-            border: "none",
+            fontFamily: "var(--font-mono)",
           },
         }),
       ],

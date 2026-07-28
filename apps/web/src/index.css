@@ -69,7 +69,13 @@ body,
   --ui-font-sans:
     -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "Roboto",
     "Helvetica Neue", sans-serif;
-  --ui-font-mono: "SF Mono", "Monaco", "Inconsolata", "Fira Code", monospace;
+  /* Maple Mono 为本地打包的等宽字体，只含 latin 子集；
+     后面是系统等宽兜底（字体未加载完 / 加载失败时用）。
+     CJK 必须显式兜底，否则通用 monospace 在 Windows 会落到 SimSun */
+  --ui-font-mono:
+    "Maple Mono", ui-monospace, SFMono-Regular, Menlo, Consolas,
+    "Liberation Mono", "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC",
+    monospace;
 
   /* Spacing */
   --ui-spacing-unit: 8px;
@@ -165,7 +171,13 @@ body,
   --ui-font-sans:
     -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "Roboto",
     "Helvetica Neue", sans-serif;
-  --ui-font-mono: "SF Mono", "Monaco", "Inconsolata", "Fira Code", monospace;
+  /* Maple Mono 为本地打包的等宽字体，只含 latin 子集；
+     后面是系统等宽兜底（字体未加载完 / 加载失败时用）。
+     CJK 必须显式兜底，否则通用 monospace 在 Windows 会落到 SimSun */
+  --ui-font-mono:
+    "Maple Mono", ui-monospace, SFMono-Regular, Menlo, Consolas,
+    "Liberation Mono", "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC",
+    monospace;
   --ui-spacing-unit: 8px;
   --ui-glass-blur: blur(20px);
 
