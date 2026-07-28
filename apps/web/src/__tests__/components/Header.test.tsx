@@ -215,7 +215,7 @@ describe("Header", () => {
     ).toBeInTheDocument();
   });
 
-  it("keeps a window drag strip when the header is hidden in Electron", () => {
+  it("keeps a window drag region when the header is hidden in Electron", () => {
     vi.mocked(useWindowControls).mockReturnValue({
       isElectron: true,
       isWindows: false,
@@ -228,23 +228,51 @@ describe("Header", () => {
 
     render(<Header />);
 
-    const strip = document.querySelector(".titlebar-drag-strip");
-    expect(strip).not.toBeNull();
-    expect(strip).not.toHaveClass("is-active");
+    const hiddenTitlebar = document.querySelector(".hidden-titlebar");
+    expect(hiddenTitlebar).not.toBeNull();
+    expect(hiddenTitlebar).not.toHaveClass("is-active");
+    expect(
+      hiddenTitlebar?.querySelector(".hidden-titlebar-drag-region"),
+    ).not.toBeNull();
 
     fireEvent.click(screen.getByLabelText("隐藏标题栏"));
 
-    expect(document.querySelector(".titlebar-drag-strip")).toHaveClass(
-      "is-active",
-    );
+    expect(document.querySelector(".hidden-titlebar")).toHaveClass("is-active");
   });
 
-  it("does not render the drag strip outside Electron", () => {
+  it("places Windows controls beside the hidden drag region", () => {
+    vi.mocked(useWindowControls).mockReturnValue({
+      isElectron: true,
+      isWindows: true,
+      isMac: false,
+      platform: "win32",
+      minimize: mockMinimize,
+      maximize: mockMaximize,
+      close: mockClose,
+    });
+
+    render(<Header />);
+    fireEvent.click(screen.getByLabelText("隐藏标题栏"));
+
+    const hiddenTitlebar = document.querySelector(".hidden-titlebar");
+    const controls = hiddenTitlebar?.querySelector(".window-controls-hidden");
+    expect(controls).not.toBeNull();
+
+    fireEvent.click(within(controls as HTMLElement).getByLabelText("最小化"));
+    fireEvent.click(within(controls as HTMLElement).getByLabelText("最大化"));
+    fireEvent.click(within(controls as HTMLElement).getByLabelText("关闭"));
+
+    expect(mockMinimize).toHaveBeenCalledOnce();
+    expect(mockMaximize).toHaveBeenCalledOnce();
+    expect(mockClose).toHaveBeenCalledOnce();
+  });
+
+  it("does not render the hidden titlebar outside Electron", () => {
     render(<Header />);
 
     fireEvent.click(screen.getByLabelText("隐藏标题栏"));
 
-    expect(document.querySelector(".titlebar-drag-strip")).toBeNull();
+    expect(document.querySelector(".hidden-titlebar")).toBeNull();
   });
 
   it("persists header visibility to localStorage", async () => {

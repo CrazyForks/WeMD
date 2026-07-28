@@ -31,11 +31,11 @@ import { useWindowControls } from "../../hooks/useWindowControls";
 import { resolveAppAssetPath } from "../../utils/assetPath";
 import { Modal, FloatingToolbarButton } from "../common";
 
-const WindowControls = ({ fixed = false }: { fixed?: boolean }) => {
+const WindowControls = ({ hidden = false }: { hidden?: boolean }) => {
   const { minimize, maximize, close } = useWindowControls();
 
   return (
-    <div className={fixed ? "window-controls-fixed" : "window-controls"}>
+    <div className={hidden ? "window-controls-hidden" : "window-controls"}>
       <button
         className="win-btn win-minimize"
         onClick={() => minimize?.()}
@@ -122,9 +122,6 @@ export function Header() {
 
   return (
     <>
-      {/* 隐藏状态下的持久化窗口控制 (Windows only) */}
-      {autoHide && isWindows && <WindowControls fixed />}
-
       {/* 隐藏状态下的浮动工具栏 */}
       {autoHide && (
         <div
@@ -178,12 +175,12 @@ export function Header() {
         </div>
       )}
 
-      {/* 顶栏隐藏后桌面端需要保留窗口拖拽区；常驻挂载让高度跟随顶栏收起动画 */}
+      {/* 隐藏标题栏由拖拽区与 Windows 窗控共同布局，避免两个命中区域重叠 */}
       {isElectron && (
-        <div
-          className={`titlebar-drag-strip ${autoHide ? "is-active" : ""}`}
-          aria-hidden="true"
-        />
+        <div className={`hidden-titlebar ${autoHide ? "is-active" : ""}`}>
+          <div className="hidden-titlebar-drag-region" aria-hidden="true" />
+          {autoHide && isWindows && <WindowControls hidden />}
+        </div>
       )}
 
       <header
