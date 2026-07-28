@@ -64,11 +64,6 @@ vi.mock("mermaid", () => ({
   },
 }));
 
-vi.mock("../../utils/katexRenderer", () => ({
-  hasMathFormula: () => true,
-  renderMathInElement: vi.fn(),
-}));
-
 vi.mock("../../utils/mermaidConfig", () => ({
   getMermaidConfig: () => ({}),
   getThemedMermaidDiagram: (input: string) => input,

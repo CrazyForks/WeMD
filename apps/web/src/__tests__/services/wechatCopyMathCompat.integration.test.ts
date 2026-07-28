@@ -32,10 +32,6 @@ vi.mock("../../services/image/imageUploadFlow", () => ({
   uploadEditorImage: mocked.uploadEditorImage,
 }));
 
-vi.mock("../../utils/katexRenderer", () => ({
-  hasMathFormula: () => false,
-}));
-
 vi.mock("../../utils/linkFootnote", () => ({
   convertLinksToFootnotes: (html: string) => html,
 }));

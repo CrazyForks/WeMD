@@ -46,10 +46,6 @@ vi.mock("../../utils/mathJaxLoader", () => ({
   loadMathJax: vi.fn(),
 }));
 
-vi.mock("../../utils/katexRenderer", () => ({
-  hasMathFormula: vi.fn(() => false),
-}));
-
 vi.mock("../../utils/linkFootnote", () => ({
   convertLinksToFootnotes: (html: string) => html,
 }));
