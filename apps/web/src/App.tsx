@@ -4,6 +4,10 @@ import { Toaster } from "react-hot-toast";
 import { Header } from "./components/Header/Header";
 import { FileSidebar } from "./components/Sidebar/FileSidebar";
 import { EditorPreviewWorkspace } from "./components/Workspace/EditorPreviewWorkspace";
+import {
+  DEFAULT_MIN_PREVIEW_WIDTH,
+  getDesktopAppMinWidth,
+} from "./components/Workspace/useSplitPane";
 import { useFileSystem } from "./hooks/useFileSystem";
 import { useMobileView } from "./hooks/useMobileView";
 import { MobileToolbar } from "./components/common/MobileToolbar";
@@ -167,6 +171,16 @@ function App() {
   };
 
   const mainClass = "app-main";
+  const [desktopPreviewMinWidth, setDesktopPreviewMinWidth] = useState(
+    DEFAULT_MIN_PREVIEW_WIDTH,
+  );
+  const appStyle = useMemo<CSSProperties | undefined>(
+    () =>
+      isMobile
+        ? undefined
+        : { minWidth: `${getDesktopAppMinWidth(desktopPreviewMinWidth)}px` },
+    [desktopPreviewMinWidth, isMobile],
+  );
   const mainStyle = useMemo(
     () =>
       ({
@@ -194,7 +208,11 @@ function App() {
   }
 
   return (
-    <div className="app" data-layout-mode={isMobile ? "mobile" : "desktop"}>
+    <div
+      className="app"
+      data-layout-mode={isMobile ? "mobile" : "desktop"}
+      style={appStyle}
+    >
       {/* 更新提示 Modal */}
       {updateInfo && (
         <Suspense fallback={null}>
@@ -307,6 +325,7 @@ function App() {
               (historyLoading && !isElectron && storageType === "indexeddb")
             }
             mobileView={isMobile ? activeView : undefined}
+            onPreviewMinimumWidthChange={setDesktopPreviewMinWidth}
           />
 
           {/* 移动端底部工具栏 */}

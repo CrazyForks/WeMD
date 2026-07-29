@@ -15,6 +15,12 @@ describe("MarkdownPreview responsive layout", () => {
     );
   });
 
+  it("预留稳定的竖向滚动条槽，避免画布在输入时左右抖动", () => {
+    expect(previewCss).toMatch(
+      /\.preview-container\s*\{[\s\S]*?scrollbar-gutter:\s*stable\s+both-edges;/,
+    );
+  });
+
   it("桌面预览在 402px 画布中保留足够的正文宽度", () => {
     expect(previewCss).toMatch(
       /\.preview-content\s*\{[\s\S]*?padding:\s*44px\s+24px\s+80px;/,

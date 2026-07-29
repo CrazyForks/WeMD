@@ -6,8 +6,15 @@ vi.mock("../../components/Editor/MarkdownEditor", () => ({
   MarkdownEditor: () => <div>编辑器</div>,
 }));
 
+const { markdownPreviewPropsMock } = vi.hoisted(() => ({
+  markdownPreviewPropsMock: vi.fn(),
+}));
+
 vi.mock("../../components/Preview/MarkdownPreview", () => ({
-  MarkdownPreview: () => <div>预览区</div>,
+  MarkdownPreview: (props: unknown) => {
+    markdownPreviewPropsMock(props);
+    return <div>预览区</div>;
+  },
 }));
 
 describe("编辑器与预览工作区", () => {
@@ -19,9 +26,23 @@ describe("编辑器与预览工作区", () => {
         store.set(key, String(value));
       }),
     });
+    markdownPreviewPropsMock.mockClear();
   });
 
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it("向预览组件传递滚动容器注册回调", () => {
+    render(<EditorPreviewWorkspace loading={false} />);
+
+    expect(markdownPreviewPropsMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        onScrollContainerChange: expect.any(Function),
+      }),
+    );
+  });
 
   it("默认提供可调分隔条并持久化键盘调整后的像素宽度", async () => {
     render(<EditorPreviewWorkspace loading={false} />);

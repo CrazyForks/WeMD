@@ -13,7 +13,10 @@ const LEGACY_RATIO_KEY = "wemd-editor-pane-ratio";
 const DEFAULT_RATIO = 0.58;
 const DIVIDER_WIDTH = 16;
 const MIN_EDITOR_WIDTH = 340;
-const MIN_PREVIEW_WIDTH = 402;
+const PREVIEW_CANVAS_WIDTH = 402;
+// 首帧回退值；挂载后按浏览器实际 gutter 与面板边框动态更新
+export const DEFAULT_MIN_PREVIEW_WIDTH = 416;
+const DEFAULT_DESKTOP_APP_MIN_WIDTH = 1080;
 // 键盘微调步长(像素),Shift 加速
 const KEYBOARD_STEP = 16;
 const KEYBOARD_STEP_LARGE = 64;
@@ -47,15 +50,29 @@ const loadLegacyRatio = (): number => {
   }
 };
 
-// 编辑器固定像素:下限保证可写作,上限保证预览至少保留 402px 画布
-export const getEditorWidthBounds = (containerWidth: number) => {
+// 编辑器固定像素:下限保证可写作,上限保证预览完整容纳固定画布
+export const getEditorWidthBounds = (
+  containerWidth: number,
+  minPreviewWidth = DEFAULT_MIN_PREVIEW_WIDTH,
+) => {
   const availableWidth = Math.max(1, containerWidth - DIVIDER_WIDTH);
-  const max = Math.max(MIN_EDITOR_WIDTH, availableWidth - MIN_PREVIEW_WIDTH);
+  const max = Math.max(MIN_EDITOR_WIDTH, availableWidth - minPreviewWidth);
   return { min: MIN_EDITOR_WIDTH, max, availableWidth };
 };
 
+export const getDesktopAppMinWidth = (minPreviewWidth: number): number =>
+  DEFAULT_DESKTOP_APP_MIN_WIDTH +
+  Math.max(0, minPreviewWidth - DEFAULT_MIN_PREVIEW_WIDTH);
+
 export function useSplitPane({ enabled = true }: UseSplitPaneOptions = {}) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [previewPaneElement, setPreviewPaneElement] =
+    useState<HTMLDivElement | null>(null);
+  const [previewContainerElement, setPreviewContainerElement] =
+    useState<HTMLDivElement | null>(null);
+  const [minPreviewWidth, setMinPreviewWidth] = useState(
+    DEFAULT_MIN_PREVIEW_WIDTH,
+  );
   const [preferredWidth, setPreferredWidth] = useState<number | null>(() =>
     enabled ? loadStoredWidth() : null,
   );
@@ -75,23 +92,42 @@ export function useSplitPane({ enabled = true }: UseSplitPaneOptions = {}) {
   useLayoutEffect(() => {
     if (!enabled) return;
     const container = containerRef.current;
-    if (!container) return;
-    const updateWidth = () => setContainerWidth(container.clientWidth);
-    updateWidth();
+    const updateLayoutMetrics = () => {
+      if (container) setContainerWidth(container.clientWidth);
+      if (!previewPaneElement || !previewContainerElement) return;
+      const paneChrome = Math.max(
+        0,
+        previewPaneElement.offsetWidth - previewPaneElement.clientWidth,
+      );
+      const scrollbarGutter = Math.max(
+        0,
+        previewContainerElement.offsetWidth -
+          previewContainerElement.clientWidth,
+      );
+      setMinPreviewWidth(
+        Math.max(
+          DEFAULT_MIN_PREVIEW_WIDTH,
+          PREVIEW_CANVAS_WIDTH + paneChrome + scrollbarGutter,
+        ),
+      );
+    };
+    updateLayoutMetrics();
 
     if (typeof ResizeObserver === "undefined") {
-      window.addEventListener("resize", updateWidth);
-      return () => window.removeEventListener("resize", updateWidth);
+      window.addEventListener("resize", updateLayoutMetrics);
+      return () => window.removeEventListener("resize", updateLayoutMetrics);
     }
 
-    const observer = new ResizeObserver(updateWidth);
-    observer.observe(container);
+    const observer = new ResizeObserver(updateLayoutMetrics);
+    if (container) observer.observe(container);
+    if (previewPaneElement) observer.observe(previewPaneElement);
+    if (previewContainerElement) observer.observe(previewContainerElement);
     return () => observer.disconnect();
-  }, [enabled]);
+  }, [enabled, previewContainerElement, previewPaneElement]);
 
   const bounds = useMemo(
-    () => getEditorWidthBounds(containerWidth || 1200),
-    [containerWidth],
+    () => getEditorWidthBounds(containerWidth || 1200, minPreviewWidth),
+    [containerWidth, minPreviewWidth],
   );
 
   // 首次或旧比例迁移:没有像素偏好且容器已量出时,按比例换算成像素并固化
@@ -168,6 +204,9 @@ export function useSplitPane({ enabled = true }: UseSplitPaneOptions = {}) {
 
   return {
     containerRef,
+    previewPaneRef: setPreviewPaneElement,
+    previewContainerRef: setPreviewContainerElement,
+    minPreviewWidth,
     editorWidth,
     minWidth: bounds.min,
     maxWidth: bounds.max,

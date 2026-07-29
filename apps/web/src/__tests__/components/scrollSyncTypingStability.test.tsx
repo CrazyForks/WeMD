@@ -75,4 +75,19 @@ describe("打字时的预览滚动同步稳定性", () => {
     // adapter 只应在挂载时注册一次，打字过程中不得反复注销/重注册
     expect(onScrollSyncReady.mock.calls.length).toBe(callsAfterMount);
   });
+
+  it("挂载和卸载时报告真实滚动容器节点", () => {
+    const onScrollContainerChange = vi.fn();
+    const { container, unmount } = render(
+      <MarkdownPreview onScrollContainerChange={onScrollContainerChange} />,
+    );
+    const scrollContainer = container.querySelector(".preview-container");
+
+    expect(onScrollContainerChange).toHaveBeenCalledWith(scrollContainer);
+
+    onScrollContainerChange.mockClear();
+    unmount();
+    expect(onScrollContainerChange).toHaveBeenCalledTimes(1);
+    expect(onScrollContainerChange).toHaveBeenCalledWith(null);
+  });
 });

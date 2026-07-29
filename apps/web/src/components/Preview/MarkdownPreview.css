@@ -34,6 +34,8 @@
 .preview-container {
   flex: 1;
   overflow-y: auto;
+  /* 两侧预留等宽滚动条槽，避免滚动条出现时横移，并保持画布居中 */
+  scrollbar-gutter: stable both-edges;
   /* 402px 画布固定居中；竖向滚动条占宽或面板贴到最小宽度时不应冒出外层横向滚动条，
      多出的空白内边距直接裁掉，宽内容由各自的内部滚动容器承担 */
   overflow-x: hidden;

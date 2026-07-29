@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import { useLayoutEffect, type CSSProperties } from "react";
 import { Loader2 } from "lucide-react";
 import { MarkdownEditor } from "../Editor/MarkdownEditor";
 import { MarkdownPreview } from "../Preview/MarkdownPreview";
@@ -10,6 +10,7 @@ import "./EditorPreviewWorkspace.css";
 interface EditorPreviewWorkspaceProps {
   loading: boolean;
   mobileView?: "editor" | "preview";
+  onPreviewMinimumWidthChange?: (width: number) => void;
 }
 
 const Loading = () => (
@@ -22,11 +23,15 @@ const Loading = () => (
 export function EditorPreviewWorkspace({
   loading,
   mobileView,
+  onPreviewMinimumWidthChange,
 }: EditorPreviewWorkspaceProps) {
   const { registerEditor, registerPreview } = useEditorPreviewScrollSync();
   const isMobileLayout = mobileView !== undefined;
   const {
     containerRef,
+    previewPaneRef,
+    previewContainerRef,
+    minPreviewWidth,
     editorWidth,
     minWidth,
     maxWidth,
@@ -38,6 +43,10 @@ export function EditorPreviewWorkspace({
     setWidthFromClientX,
     resetWidth,
   } = useSplitPane({ enabled: !isMobileLayout });
+  useLayoutEffect(() => {
+    if (isMobileLayout) return;
+    onPreviewMinimumWidthChange?.(minPreviewWidth);
+  }, [isMobileLayout, minPreviewWidth, onPreviewMinimumWidthChange]);
   const style = isMobileLayout
     ? undefined
     : ({
@@ -71,11 +80,14 @@ export function EditorPreviewWorkspace({
           onDraggingChange={setDragging}
         />
       )}
-      <div className="preview-pane">
+      <div ref={previewPaneRef} className="preview-pane">
         {loading ? (
           <Loading />
         ) : (
-          <MarkdownPreview onScrollSyncReady={registerPreview} />
+          <MarkdownPreview
+            onScrollSyncReady={registerPreview}
+            onScrollContainerChange={previewContainerRef}
+          />
         )}
       </div>
     </div>

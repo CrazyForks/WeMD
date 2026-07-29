@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useMemo } from "react";
+import { useCallback, useEffect, useState, useRef, useMemo } from "react";
 import mermaid from "mermaid";
 import { createMarkdownParser, processHtml } from "@wemd/core";
 import { useEditorStore } from "../../store/editorStore";
@@ -30,6 +30,7 @@ import "./MarkdownPreview.css";
 
 interface MarkdownPreviewProps {
   onScrollSyncReady?: (adapter: ScrollSyncAdapter | null) => void;
+  onScrollContainerChange?: (container: HTMLDivElement | null) => void;
 }
 
 const collectAnchors = (
@@ -56,7 +57,10 @@ const collectAnchors = (
   });
 };
 
-export function MarkdownPreview({ onScrollSyncReady }: MarkdownPreviewProps) {
+export function MarkdownPreview({
+  onScrollSyncReady,
+  onScrollContainerChange,
+}: MarkdownPreviewProps) {
   const { markdown } = useEditorStore();
   const { themeId: theme, customCSS, getThemeCSS } = useThemeStore();
   const uiTheme = useUITheme((state) => state.theme);
@@ -68,10 +72,17 @@ export function MarkdownPreview({ onScrollSyncReady }: MarkdownPreviewProps) {
     getPublishingPreference("tableWrap"),
   );
   const previewRef = useRef<HTMLDivElement>(null);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   // 锚点缓存跨 html 变化保留在 ref 上，内容变了只置空、不重建 adapter
   const anchorCacheRef = useRef<ScrollAnchor[] | null>(null);
   const mermaidRenderIdRef = useRef(0);
+  const registerScrollContainer = useCallback(
+    (container: HTMLDivElement | null) => {
+      scrollContainerRef.current = container;
+      onScrollContainerChange?.(container);
+    },
+    [onScrollContainerChange],
+  );
 
   // 获取当前主题对象（注意与 line 25 的 themeId 区分）
   const currentTheme = useThemeStore(
@@ -263,7 +274,7 @@ export function MarkdownPreview({ onScrollSyncReady }: MarkdownPreviewProps) {
       </div>
       <div
         className="preview-container"
-        ref={scrollContainerRef}
+        ref={registerScrollContainer}
         onClick={(e) => {
           const target = e.target as HTMLElement;
           const link = target.closest("a");
