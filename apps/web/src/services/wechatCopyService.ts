@@ -104,25 +104,98 @@ const convertCheckboxesToEmoji = (html: string): string => {
 
 // ── 剪贴板写入策略 ─────────────────────────────────
 
-const copyViaNativeExecCommand = (container: HTMLElement): boolean => {
-  const selection = window.getSelection();
-  const range = document.createRange();
-  range.selectNodeContents(container);
-  selection?.removeAllRanges();
-  selection?.addRange(range);
-  try {
-    return document.execCommand("copy");
-  } finally {
-    selection?.removeAllRanges();
-  }
-};
-
 const getRenderedPlainText = (container: HTMLElement): string => {
   const innerText = container.innerText;
   if (typeof innerText === "string" && innerText.trim().length > 0) {
     return innerText;
   }
   return container.textContent || "";
+};
+
+const copyViaNativeExecCommand = (container: HTMLElement): boolean => {
+  const html = container.innerHTML;
+  const text = getRenderedPlainText(container);
+  const selection = window.getSelection();
+  const previousRanges = selection
+    ? Array.from({ length: selection.rangeCount }, (_, index) =>
+        selection.getRangeAt(index).cloneRange(),
+      )
+    : [];
+  const previousActiveElement =
+    document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+  const previousTextControlSelection =
+    previousActiveElement instanceof HTMLInputElement ||
+    previousActiveElement instanceof HTMLTextAreaElement
+      ? {
+          start: previousActiveElement.selectionStart,
+          end: previousActiveElement.selectionEnd,
+          direction: previousActiveElement.selectionDirection,
+        }
+      : null;
+  let payloadWritten = false;
+  const handleCopy = (event: Event) => {
+    const clipboardEvent = event as ClipboardEvent;
+    if (!clipboardEvent.clipboardData) return;
+
+    try {
+      clipboardEvent.clipboardData.setData("text/html", html);
+      clipboardEvent.clipboardData.setData("text/plain", text);
+      clipboardEvent.preventDefault();
+      payloadWritten = true;
+    } catch {
+      payloadWritten = false;
+    }
+  };
+
+  document.addEventListener("copy", handleCopy, true);
+  try {
+    const range = document.createRange();
+    range.selectNodeContents(container);
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+
+    // 返回值只表示命令是否执行，不代表 copy handler 已写入目标载荷。
+    document.execCommand("copy");
+    return payloadWritten;
+  } catch {
+    return false;
+  } finally {
+    document.removeEventListener("copy", handleCopy, true);
+
+    if (previousActiveElement?.isConnected) {
+      try {
+        if (document.activeElement !== previousActiveElement) {
+          previousActiveElement.focus({ preventScroll: true });
+        }
+        if (
+          previousTextControlSelection &&
+          (previousActiveElement instanceof HTMLInputElement ||
+            previousActiveElement instanceof HTMLTextAreaElement) &&
+          previousTextControlSelection.start !== null &&
+          previousTextControlSelection.end !== null
+        ) {
+          previousActiveElement.setSelectionRange(
+            previousTextControlSelection.start,
+            previousTextControlSelection.end,
+            previousTextControlSelection.direction ?? undefined,
+          );
+        }
+      } catch {
+        // 原焦点节点不再支持恢复时继续完成剪贴板回退。
+      }
+    }
+
+    selection?.removeAllRanges();
+    previousRanges.forEach((previousRange) => {
+      try {
+        selection?.addRange(previousRange);
+      } catch {
+        // 原选区节点已移除时保持空选区，避免复制流程继续失败。
+      }
+    });
+  }
 };
 
 const copyViaElectronClipboard = async (

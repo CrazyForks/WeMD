@@ -127,6 +127,16 @@ class MockClipboardItem {
   }
 }
 
+const dispatchSuccessfulCopy = (): boolean => {
+  const event = new Event("copy", { bubbles: true, cancelable: true });
+  Object.defineProperty(event, "clipboardData", {
+    configurable: true,
+    value: { setData: vi.fn() },
+  });
+  document.dispatchEvent(event);
+  return true;
+};
+
 describe("wechatCopyService clipboard strategy", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -170,7 +180,9 @@ describe("wechatCopyService clipboard strategy", () => {
   });
 
   it("prefers native execCommand copy", async () => {
-    const execSpy = vi.spyOn(document, "execCommand").mockReturnValue(true);
+    const execSpy = vi
+      .spyOn(document, "execCommand")
+      .mockImplementation(dispatchSuccessfulCopy);
 
     await copyToWechat("test", "#wemd p { margin: 18px 0; }");
 
@@ -181,7 +193,9 @@ describe("wechatCopyService clipboard strategy", () => {
   });
 
   it("复制成功提示不使用 emoji 图标", async () => {
-    vi.spyOn(document, "execCommand").mockReturnValue(true);
+    vi.spyOn(document, "execCommand").mockImplementation(
+      dispatchSuccessfulCopy,
+    );
 
     await copyToWechat("test", "#wemd p { margin: 18px 0; }");
 
@@ -214,7 +228,9 @@ describe("wechatCopyService clipboard strategy", () => {
         },
       },
     });
-    const execSpy = vi.spyOn(document, "execCommand").mockReturnValue(true);
+    const execSpy = vi
+      .spyOn(document, "execCommand")
+      .mockImplementation(dispatchSuccessfulCopy);
 
     await copyToWechat("test", "#wemd p { margin: 18px 0; }");
 
@@ -238,7 +254,9 @@ describe("wechatCopyService clipboard strategy", () => {
         },
       },
     });
-    const execSpy = vi.spyOn(document, "execCommand").mockReturnValue(true);
+    const execSpy = vi
+      .spyOn(document, "execCommand")
+      .mockImplementation(dispatchSuccessfulCopy);
 
     await copyToWechat("test", "#wemd p { margin: 18px 0; }");
 
@@ -263,7 +281,9 @@ describe("wechatCopyService clipboard strategy", () => {
         },
       },
     });
-    const execSpy = vi.spyOn(document, "execCommand").mockReturnValue(true);
+    const execSpy = vi
+      .spyOn(document, "execCommand")
+      .mockImplementation(dispatchSuccessfulCopy);
 
     await copyToWechat("test", "#wemd p { margin: 18px 0; }");
 

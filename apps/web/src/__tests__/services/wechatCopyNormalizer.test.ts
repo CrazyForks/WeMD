@@ -45,6 +45,111 @@ describe("wechatCopyNormalizer", () => {
     expect(paragraphs[1].style.backgroundColor).not.toBe("transparent");
   });
 
+  it("keeps the single root section as a continuous background canvas", () => {
+    const container = document.createElement("div");
+    container.innerHTML = `
+      <section
+        id="wemd"
+        data-tool="WeMD编辑器"
+        style="
+          padding: 18px 16px 20px;
+          background-color: rgb(248, 251, 255);
+          background-image: linear-gradient(90deg, rgba(37, 99, 235, 0.28) 1px, transparent 1px), linear-gradient(0deg, rgba(6, 182, 212, 0.28) 1px, transparent 1px);
+          background-position: 3px 5px;
+          background-size: 12px 12px;
+          background-repeat: repeat;
+        "
+      >
+        <h2 style="border-left: 4px solid rgb(0, 87, 255);"><span>标题</span></h2>
+        <p data-source="kept"><strong>正文</strong><a href="https://example.com">链接</a></p>
+        <blockquote><p>引用</p></blockquote>
+      </section>
+    `;
+    const originalRoot = container.firstElementChild as HTMLElement;
+    const originalChildren = Array.from(originalRoot.children);
+
+    normalizeCopyContainer(container);
+
+    const root = container.firstElementChild as HTMLElement;
+    expect(container.childElementCount).toBe(1);
+    expect(root).toBe(originalRoot);
+    expect(root.tagName).toBe("SECTION");
+    expect(root.id).toBe("");
+    expect(root.hasAttribute("data-tool")).toBe(false);
+    expect(Array.from(root.children)).toEqual(originalChildren);
+    expect(root.style.paddingTop).toBe("18px");
+    expect(root.style.paddingRight).toBe("16px");
+    expect(root.style.paddingBottom).toBe("20px");
+    expect(root.style.paddingLeft).toBe("16px");
+    expect(root.style.backgroundColor).toBe("rgb(248, 251, 255)");
+    expect(root.style.backgroundImage).toContain("linear-gradient");
+    expect(root.style.backgroundPosition).toBe("3px 5px");
+    expect(root.style.backgroundSize).toBe("12px 12px");
+    expect(root.style.backgroundRepeat).toBe("repeat");
+    const heading = root.querySelector("h2") as HTMLElement;
+    const paragraph = root.querySelector(
+      "p[data-source='kept']",
+    ) as HTMLElement;
+    expect(heading.style.borderLeft).toContain("4px");
+    expect(heading.style.backgroundColor).toBe("transparent");
+    expect(paragraph.style.backgroundColor).toBe("transparent");
+    expect(
+      root.querySelector("p[data-source='kept'] strong")?.textContent,
+    ).toBe("正文");
+    expect(root.querySelector("a")?.getAttribute("href")).toBe(
+      "https://example.com",
+    );
+  });
+
+  it("keeps a shorthand gradient background on the root section", () => {
+    const container = document.createElement("div");
+    container.innerHTML = `
+      <section id="wemd">
+        <p>另一种连续背景</p>
+      </section>
+    `;
+    const sourceRoot = container.firstElementChild as HTMLElement;
+    sourceRoot.style.setProperty(
+      "background",
+      "repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.08) 0 1px, transparent 1px 12px) rgb(246, 255, 248)",
+      "important",
+    );
+    sourceRoot.style.setProperty("background-position", "4px 6px", "important");
+    sourceRoot.style.setProperty("background-size", "12px 12px", "important");
+    sourceRoot.style.setProperty("background-repeat", "repeat", "important");
+    sourceRoot.style.setProperty("padding", "10px 14px");
+
+    expect(sourceRoot.style.backgroundPosition).toBe("4px 6px");
+    expect(sourceRoot.style.backgroundSize).toBe("12px 12px");
+
+    normalizeCopyContainer(container);
+
+    const root = container.firstElementChild as HTMLElement;
+    expect(root.tagName).toBe("SECTION");
+    expect(root.getAttribute("style")).not.toMatch(/(^|;)\s*background\s*:/);
+    expect(root.style.backgroundImage).toContain("repeating-linear-gradient");
+    expect(root.style.backgroundColor).toBe("rgb(246, 255, 248)");
+    expect(root.style.backgroundPosition).toBe("4px 6px");
+    expect(root.style.backgroundSize).toBe("12px 12px");
+    expect(root.style.backgroundRepeat).toBe("repeat");
+    expect(root.style.getPropertyPriority("background-image")).toBe(
+      "important",
+    );
+    expect(root.style.getPropertyPriority("background-color")).toBe(
+      "important",
+    );
+    expect(root.style.getPropertyPriority("background-position")).toBe(
+      "important",
+    );
+    expect(root.style.getPropertyPriority("background-size")).toBe("important");
+    expect(root.style.paddingTop).toBe("10px");
+    expect(root.style.paddingRight).toBe("14px");
+
+    const onceNormalized = container.innerHTML;
+    normalizeCopyContainer(container);
+    expect(container.innerHTML).toBe(onceNormalized);
+  });
+
   it("relocates root horizontal padding to direct children", () => {
     const container = document.createElement("div");
     container.innerHTML =

@@ -1,12 +1,16 @@
 /**
  * 微信复制 DOM 容器规范化
  * 处理微信公众号编辑器对粘贴 HTML 的清洗兼容问题：
- * - root section → div 转换
+ * - 连续背景保留 root section，其余场景转换为 div
  * - 元数据属性清理
- * - 根节点 padding 迁移到内层元素
- * - 背景色下沉到子块
+ * - 无连续背景时将根节点 padding 迁移到内层元素
+ * - 无连续背景时将背景色下沉到子块
  */
 import { materializeCodeLineBreaksForWechat } from "./wechatCodeBlockCompat";
+import {
+  hasExplicitBackgroundImage,
+  prepareRootBackgroundCanvasForWechat,
+} from "./wechatBackgroundCanvas";
 
 // ── 颜色透明度判断 ──────────────────────────────────
 
@@ -62,24 +66,6 @@ const isTransparentBackground = (value: string): boolean => {
 
   const alpha = getFunctionalColorAlpha(normalized);
   return alpha !== null && alpha <= 0;
-};
-
-const hasExplicitBackgroundImage = (value: string): boolean => {
-  const normalized = value.trim().toLowerCase();
-  if (!normalized) return false;
-
-  if (/^none(\s*,\s*none)*$/.test(normalized)) return false;
-  if (
-    normalized === "initial" ||
-    normalized === "inherit" ||
-    normalized === "unset" ||
-    normalized === "revert" ||
-    normalized === "revert-layer"
-  ) {
-    return false;
-  }
-
-  return true;
 };
 
 const DEFAULT_COPY_TEXT_COLOR = "#1a1a1a";
@@ -473,10 +459,18 @@ const normalizeBlockBackgroundForWechat = (
 
 export const normalizeCopyContainer = (container: HTMLElement): void => {
   materializeCodeLineBreaksForWechat(container);
-  transformWemdRootSectionToDiv(container);
+  const preserveRootBackgroundCanvas =
+    prepareRootBackgroundCanvasForWechat(container);
+  if (!preserveRootBackgroundCanvas) {
+    transformWemdRootSectionToDiv(container);
+  }
   stripCopyMetadata(container);
-  const rootBgColor = extractRootBackgroundColor(container);
-  relocateRootPaddingToInnerWrapper(container);
+  const rootBgColor = preserveRootBackgroundCanvas
+    ? null
+    : extractRootBackgroundColor(container);
+  if (!preserveRootBackgroundCanvas) {
+    relocateRootPaddingToInnerWrapper(container);
+  }
   normalizeBlockBackgroundForWechat(container, rootBgColor);
   materializeTextColorForWechat(container);
 };

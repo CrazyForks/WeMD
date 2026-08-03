@@ -352,21 +352,25 @@ const resolveElementTreeVars = (
 };
 
 export const resolveInlineStyleVariablesForCopy = (html: string): string => {
+  const hasInlineCustomProperty =
+    /style\s*=\s*(?:"[^"]*--[\w-]+\s*:|'[^']*--[\w-]+\s*:)/i.test(html);
   if (
     typeof window === "undefined" ||
     typeof document === "undefined" ||
     !html ||
-    !html.includes("var(")
+    (!html.includes("var(") && !hasInlineCustomProperty)
   ) {
     return html;
   }
 
   const host = document.createElement("div");
-  host.style.position = "absolute";
-  host.style.left = "-9999px";
-  host.style.top = "-9999px";
+  host.style.position = "fixed";
+  host.style.left = "0";
+  host.style.top = "0";
   host.style.pointerEvents = "none";
   host.style.opacity = "0";
+  host.style.zIndex = "-1";
+  host.style.contain = "layout style paint";
   // 强制亮色模式，防止暗色 UI 下 getComputedStyle 回退到亮色文字默认值
   host.style.colorScheme = "light";
   host.style.color = "#000000";

@@ -219,6 +219,48 @@ describe("wechat copy css integration", () => {
     expect(paragraph!.style.color).toBe("rgb(34, 34, 34)");
   });
 
+  it("removes inline custom properties even when no var() references remain", () => {
+    const html = `
+      <section id="wemd" style="--wemd-page-padding: 20px; background-color: #ffffff; background-image: linear-gradient(90deg, rgba(50, 0, 0, 0.05) 1px, transparent 1px);">
+        <p style="--wemd-text-color: #595959; color: #595959;">正文</p>
+      </section>
+    `;
+
+    const output = resolveInlineStyleVariablesForCopy(html);
+    const container = document.createElement("div");
+    container.innerHTML = output;
+    const root = container.querySelector("#wemd") as HTMLElement;
+    const paragraph = container.querySelector("p") as HTMLElement;
+
+    expect(root.style.getPropertyValue("--wemd-page-padding")).toBe("");
+    expect(paragraph.style.getPropertyValue("--wemd-text-color")).toBe("");
+    expect(root.style.backgroundColor).toBe("rgb(255, 255, 255)");
+    expect(root.style.backgroundImage).toContain("linear-gradient");
+    expect(paragraph.style.color).toBe("rgb(89, 89, 89)");
+  });
+
+  it("uses a viewport-contained temporary host when resolving inline variables", () => {
+    const appendSpy = vi.spyOn(document.body, "appendChild");
+
+    try {
+      resolveInlineStyleVariablesForCopy(`
+        <section id="wemd" style="--wemd-color: #595959; color: var(--wemd-color);">
+          <p>正文</p>
+        </section>
+      `);
+
+      const host = appendSpy.mock.calls[0]?.[0] as HTMLElement | undefined;
+      expect(host).toBeTruthy();
+      expect(host?.style.position).toBe("fixed");
+      expect(host?.style.left).toBe("0px");
+      expect(host?.style.top).toBe("0px");
+      expect(host?.style.opacity).toBe("0");
+      expect(host?.style.contain).toBe("layout style paint");
+    } finally {
+      appendSpy.mockRestore();
+    }
+  });
+
   it("resolves same custom property name based on local scope", () => {
     const html = `<p>root</p><blockquote><p>quote</p></blockquote>`;
     const css = `

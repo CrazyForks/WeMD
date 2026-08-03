@@ -27,6 +27,53 @@ describe("expandCSSVariables", () => {
     expect(result).toContain("font-size: 14px");
   });
 
+  it("removes custom properties that follow comments in the same rule block", () => {
+    const css = `
+      #wemd {
+        /* 页面布局 */
+        --wemd-page-padding: 20px;
+        /* 背景 */
+        --wemd-grid-color: rgba(50, 0, 0, 0.05);
+        padding: 30px var(--wemd-page-padding);
+        background-image: linear-gradient(90deg, var(--wemd-grid-color) 1px, transparent 1px);
+      }
+    `;
+    const result = expandCSSVariables(css);
+
+    expect(result).toContain("padding: 30px 20px");
+    expect(result).toContain("rgba(50, 0, 0, 0.05) 1px");
+    expect(result).not.toMatch(/--[\w-]+\s*:/);
+  });
+
+  it("ignores semicolons inside comments when removing custom properties", () => {
+    const css = `
+      #wemd {
+        /* 页面布局；英文分隔符也允许 ; spacing */
+        --wemd-page-padding: 20px;
+        padding: 30px var(--wemd-page-padding);
+      }
+    `;
+    const result = expandCSSVariables(css);
+
+    expect(result).toContain("padding: 30px 20px");
+    expect(result).not.toMatch(/--[\w-]+\s*:/);
+  });
+
+  it("preserves semicolons inside quoted custom property values", () => {
+    const css = `
+      #wemd {
+        --wemd-data-label: "grid;paper";
+      }
+      #wemd::before {
+        content: var(--wemd-data-label);
+      }
+    `;
+    const result = expandCSSVariables(css);
+
+    expect(result).toContain('content: "grid;paper"');
+    expect(result).not.toMatch(/--[\w-]+\s*:/);
+  });
+
   it("removes empty rule blocks after stripping declarations", () => {
     const css = `
       #wemd { --wemd-font-size: 14px; }
