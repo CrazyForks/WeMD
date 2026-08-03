@@ -111,8 +111,11 @@ describe("Header", () => {
   it("renders logo and core elements", () => {
     render(<Header />);
 
-    expect(screen.getByRole("img", { name: "WeMD Logo" })).toBeInTheDocument();
-    expect(screen.getByText("WeMD")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "WeMD Logo" })).toHaveAttribute(
+      "src",
+      "/favicon-dark.svg",
+    );
+    expect(screen.getByText("WeMD")).toHaveClass("logo-text");
     expect(screen.getByText("复制到公众号")).toBeInTheDocument();
   });
 

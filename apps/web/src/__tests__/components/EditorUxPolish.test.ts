@@ -48,6 +48,16 @@ const contrastRatio = (foreground: string, background: string) => {
 };
 
 describe("编辑器 UX 视觉校准", () => {
+  it("亮色模式使用指定的深翡翠绿主色", () => {
+    const lightTheme = indexCss.match(/:root\s*\{([\s\S]*?)\n\}/)?.[1];
+
+    expect(lightTheme).toContain("--ui-accent-primary: #047857;");
+    expect(lightTheme).toContain("--ui-accent-hover: #006d3d;");
+    expect(lightTheme).toContain("--ui-accent-active: #006d3d;");
+    expect(lightTheme).toContain("--ui-on-accent: #ffffff;");
+    expect(contrastRatio("#ffffff", "#047857")).toBeGreaterThanOrEqual(4.5);
+  });
+
   it("暗色模式使用指定翡翠绿并保持按钮文字可读", () => {
     const darkTheme = indexCss.match(
       /\[data-ui-theme="dark"\]\s*\{([\s\S]*?)\n\}/,

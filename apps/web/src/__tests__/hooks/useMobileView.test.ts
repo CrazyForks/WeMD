@@ -45,8 +45,8 @@ describe("useMobileView", () => {
     expect(result.current.isMobile).toBe(false);
   });
 
-  it("宽屏即便是触屏也视为桌面布局", () => {
-    setViewport(1200, true);
+  it("1440px 代表性宽屏即便是触屏也视为桌面布局", () => {
+    setViewport(1440, true);
     const { result } = renderHook(() => useMobileView());
     expect(result.current.isMobile).toBe(false);
   });
