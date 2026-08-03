@@ -9,21 +9,27 @@ import {
 } from "./cssVarParser";
 
 /**
- * 从 CSS 文本中提取所有自定义属性声明
- * 返回 variableName → value 的映射
+ * 逐字符扫描 CSS 文本，统一维护引号、转义与注释状态，
+ * 供声明切分、注释移除与规则块切分共用。
+ * 注释、字符串及转义序列中的特殊字符不会触发 onChar 之外的逻辑。
  */
-const splitCssDeclarations = (body: string): string[] => {
-  const declarations: string[] = [];
-  let start = 0;
+type CssCharKind = "plain" | "string" | "escape";
+
+interface CssScanHandlers {
+  /** 每个逻辑字符回调，kind 标识其上下文 */
+  onChar: (char: string, index: number, kind: CssCharKind) => void;
+  /** 遇到注释开始（/* 位置）时回调 */
+  onCommentStart?: (index: number) => void;
+}
+
+const scanCss = (css: string, handlers: CssScanHandlers): void => {
   let quote: "'" | '"' | null = null;
   let escapeNext = false;
   let inComment = false;
-  let parenthesisDepth = 0;
-  let bracketDepth = 0;
 
-  for (let index = 0; index < body.length; index += 1) {
-    const char = body[index];
-    const next = body[index + 1];
+  for (let index = 0; index < css.length; index += 1) {
+    const char = css[index];
+    const next = css[index + 1];
 
     if (inComment) {
       if (char === "*" && next === "/") {
@@ -34,40 +40,69 @@ const splitCssDeclarations = (body: string): string[] => {
     }
 
     if (escapeNext) {
+      handlers.onChar(char, index, "escape");
       escapeNext = false;
       continue;
     }
 
-    if (char === "\\") {
-      escapeNext = true;
-      continue;
-    }
-
     if (quote) {
+      if (char === "\\") {
+        escapeNext = true;
+        handlers.onChar(char, index, "string");
+        continue;
+      }
+      handlers.onChar(char, index, "string");
       if (char === quote) quote = null;
       continue;
     }
 
     if (char === "/" && next === "*") {
       inComment = true;
+      handlers.onCommentStart?.(index);
       index += 1;
       continue;
     }
 
     if (char === "'" || char === '"') {
       quote = char;
-      continue;
     }
-
-    if (char === "(") parenthesisDepth += 1;
-    else if (char === ")") parenthesisDepth = Math.max(0, parenthesisDepth - 1);
-    else if (char === "[") bracketDepth += 1;
-    else if (char === "]") bracketDepth = Math.max(0, bracketDepth - 1);
-    else if (char === ";" && parenthesisDepth === 0 && bracketDepth === 0) {
-      declarations.push(body.slice(start, index));
-      start = index + 1;
-    }
+    handlers.onChar(char, index, "plain");
   }
+};
+
+/**
+ * 从 CSS 规则块体（去掉外层花括号）中按顶层分号切分声明
+ * 注释、字符串、转义与嵌套括号/花括号中的分号不参与切分
+ */
+const splitCssDeclarations = (body: string): string[] => {
+  const declarations: string[] = [];
+  let start = 0;
+  let parenthesisDepth = 0;
+  let bracketDepth = 0;
+  let braceDepth = 0;
+
+  scanCss(body, {
+    onChar: (char, index, kind) => {
+      // 字符串与转义内的字符不参与声明切分
+      if (kind !== "plain") return;
+      if (char === "(") parenthesisDepth += 1;
+      else if (char === ")")
+        parenthesisDepth = Math.max(0, parenthesisDepth - 1);
+      else if (char === "[") bracketDepth += 1;
+      else if (char === "]") bracketDepth = Math.max(0, bracketDepth - 1);
+      else if (char === "{") braceDepth += 1;
+      else if (char === "}") braceDepth = Math.max(0, braceDepth - 1);
+      else if (
+        char === ";" &&
+        parenthesisDepth === 0 &&
+        bracketDepth === 0 &&
+        braceDepth === 0
+      ) {
+        declarations.push(body.slice(start, index));
+        start = index + 1;
+      }
+    },
+  });
 
   declarations.push(body.slice(start));
   return declarations;
@@ -75,51 +110,15 @@ const splitCssDeclarations = (body: string): string[] => {
 
 const removeCssComments = (value: string): string => {
   let output = "";
-  let quote: "'" | '"' | null = null;
-  let escapeNext = false;
-  let inComment = false;
-
-  for (let index = 0; index < value.length; index += 1) {
-    const char = value[index];
-    const next = value[index + 1];
-
-    if (inComment) {
-      if (char === "*" && next === "/") {
-        inComment = false;
-        index += 1;
-      }
-      continue;
-    }
-
-    if (escapeNext) {
-      output += char;
-      escapeNext = false;
-      continue;
-    }
-
-    if (char === "\\") {
-      output += char;
-      escapeNext = true;
-      continue;
-    }
-
-    if (quote) {
-      output += char;
-      if (char === quote) quote = null;
-      continue;
-    }
-
-    if (char === "/" && next === "*") {
-      inComment = true;
+  scanCss(value, {
+    // 注释替换为单个空格，避免前后内容粘连
+    onCommentStart: () => {
       output += " ";
-      index += 1;
-      continue;
-    }
-
-    output += char;
-    if (char === "'" || char === '"') quote = char;
-  }
-
+    },
+    onChar: (char) => {
+      output += char;
+    },
+  });
   return output;
 };
 
@@ -132,16 +131,65 @@ const parseCustomPropertyDeclaration = (
   return [match[1], match[2].trim()];
 };
 
+/**
+ * 将 CSS 文本切分为规则块，返回 [选择器, 块体] 对
+ * 注释、字符串、转义中的花括号不参与判定；支持嵌套块（内层花括号不干扰外层闭合）
+ */
+interface CssRuleBlock {
+  selector: string;
+  body: string;
+  /** 块起始位置（选择器开头） */
+  start: number;
+  /** 块结束位置（闭花括号之后） */
+  end: number;
+}
+
+const splitCssRuleBlocks = (css: string): CssRuleBlock[] => {
+  const blocks: CssRuleBlock[] = [];
+  let selectorStart = 0;
+  let braceDepth = 0;
+  let block: CssRuleBlock | null = null;
+
+  scanCss(css, {
+    onChar: (char, index, kind) => {
+      // 字符串与转义内的花括号不参与规则块判定
+      if (kind !== "plain") return;
+      if (char === "{") {
+        if (braceDepth === 0) {
+          block = {
+            selector: css.slice(selectorStart, index),
+            body: "",
+            start: selectorStart,
+            end: -1,
+          };
+          blocks.push(block);
+        }
+        braceDepth += 1;
+      } else if (char === "}") {
+        if (braceDepth === 1 && block) {
+          block.body = css.slice(
+            block.start + block.selector.length + 1,
+            index,
+          );
+          block.end = index + 1;
+          selectorStart = index + 1;
+        }
+        braceDepth = Math.max(0, braceDepth - 1);
+      }
+    },
+  });
+
+  return blocks;
+};
+
 const extractCustomProperties = (css: string): Map<string, string> => {
   const vars = new Map<string, string>();
-  const regex = /([^{}]*)\{([^{}]*)\}/gs;
-  let match: RegExpExecArray | null;
-  while ((match = regex.exec(css)) !== null) {
-    splitCssDeclarations(match[2]).forEach((declaration) => {
+  splitCssRuleBlocks(css).forEach((block) => {
+    splitCssDeclarations(block.body).forEach((declaration) => {
       const customProperty = parseCustomPropertyDeclaration(declaration);
       if (customProperty) vars.set(...customProperty);
     });
-  }
+  });
   return vars;
 };
 
@@ -211,20 +259,30 @@ const resolveVarReferences = (
  * 如果清理后规则块为空，整个规则块会被移除
  */
 const stripCustomPropertyDeclarations = (css: string): string => {
-  return css.replace(
-    /([^{}]*)\{([^{}]*)\}/gs,
-    (_match, selector: string, body: string) => {
-      const lines = splitCssDeclarations(body)
-        .map((line) => line.trim())
-        .filter(
-          (line) =>
-            removeCssComments(line).trim().length > 0 &&
-            parseCustomPropertyDeclaration(line) === null,
-        );
-      if (lines.length === 0) return "";
-      return `${selector.trim()} { ${lines.join("; ")}; }`;
-    },
-  );
+  let result = "";
+  let cursor = 0;
+
+  splitCssRuleBlocks(css).forEach((block) => {
+    const lines = splitCssDeclarations(block.body)
+      .map((line) => line.trim())
+      .filter(
+        (line) =>
+          removeCssComments(line).trim().length > 0 &&
+          parseCustomPropertyDeclaration(line) === null,
+      );
+    // 块前文本原样保留
+    result += css.slice(cursor, block.start);
+    if (lines.length === 0) {
+      // 清理后为空块：整体移除
+      cursor = block.end;
+      return;
+    }
+    result += `${block.selector.trim()} { ${lines.join("; ")}; }`;
+    cursor = block.end;
+  });
+
+  result += css.slice(cursor);
+  return result;
 };
 
 /**

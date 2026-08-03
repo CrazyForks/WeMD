@@ -162,4 +162,47 @@ describe("expandCSSVariables", () => {
     expect(result).toContain("overflow-wrap: break-word");
     expect(result).not.toMatch(/--wemd-font-size\s*:/);
   });
+
+  it("ignores braces inside comments when parsing rule blocks", () => {
+    const css = `
+      #wemd {
+        /* group { vars } */
+        --grid-color: red;
+        background: var(--grid-color);
+      }
+    `;
+    const result = expandCSSVariables(css);
+
+    expect(result).toContain("background: red");
+    expect(result).not.toContain("var(");
+    expect(result).not.toMatch(/--grid-color\s*:/);
+  });
+
+  it("ignores braces inside strings when parsing rule blocks", () => {
+    const css = `
+      #wemd { --label: "grid;paper"; }
+      #wemd::before { content: "{"; }
+      #wemd::after { content: "}"; }
+    `;
+    const result = expandCSSVariables(css);
+
+    expect(result).toContain('content: "{"');
+    expect(result).toContain('content: "}"');
+    expect(result).not.toMatch(/--label\s*:/);
+  });
+
+  it("keeps rule blocks intact when braces appear in data URIs", () => {
+    const css = `
+      .wemd-icon {
+        background: url("data:image/svg+xml;utf8,<svg>{}</svg>");
+        --wemd-icon-size: 2px;
+        padding: var(--wemd-icon-size);
+      }
+    `;
+    const result = expandCSSVariables(css);
+
+    expect(result).toContain('url("data:image/svg+xml;utf8,<svg>{}</svg>")');
+    expect(result).toContain("padding: 2px");
+    expect(result).not.toMatch(/--wemd-icon-size\s*:/);
+  });
 });
