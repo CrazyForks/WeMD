@@ -58,6 +58,14 @@ interface ElectronAPI {
       folderPath: string;
       targetFolder: string;
     }) => Promise<{ success: boolean; newPath?: string; error?: string }>;
+    readThemes: () => Promise<{
+      success: boolean;
+      content?: string | null;
+      error?: string;
+    }>;
+    writeThemes: (
+      content: string,
+    ) => Promise<{ success: boolean; error?: string }>;
     onRefresh: (callback: () => void) => unknown;
     removeRefreshListener: (handler: unknown) => void;
     onMenuNewFile: (callback: () => void) => unknown;

@@ -81,6 +81,15 @@ describe("ThemePanel", () => {
         exportTheme: vi.fn(),
         exportThemeCSS: vi.fn(),
         importTheme: vi.fn().mockResolvedValue(true),
+        workspaceBackend: null,
+        workspaceId: null,
+        pendingLocalOnlyThemes: [],
+        workspaceFileBroken: false,
+        setWorkspaceThemeBackend: vi.fn(),
+        loadWorkspaceThemes: vi.fn().mockResolvedValue(undefined),
+        acceptPendingThemes: vi.fn(),
+        dismissPendingThemes: vi.fn(),
+        snoozePendingThemes: vi.fn(),
       };
       return selector(state);
     });

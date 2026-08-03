@@ -40,6 +40,9 @@ const UpdateModal = lazy(() =>
   })),
 );
 import { MobileThemeSelector } from "./components/Theme/MobileThemeSelector";
+import { WorkspaceThemeMergePrompt } from "./components/Theme/WorkspaceThemeMergePrompt";
+import { useThemeStore } from "./store/themeStore";
+import { createWorkspaceThemeBackend } from "./services/theme/themeStorageBackend";
 
 interface UpdateEventData {
   latestVersion: string;
@@ -60,9 +63,10 @@ interface ElectronUpdateAPI {
 
 function App() {
   const { workspacePath, saveFile } = useFileSystem({ enableEffects: true });
-  const { type: storageType, ready } = useStorageContext();
+  const { adapter, type: storageType, ready } = useStorageContext();
   const historyLoading = useHistoryStore((state) => state.loading);
   const fileLoading = useFileStore((state) => state.isLoading);
+  const workspaceRevision = useFileStore((state) => state.workspaceRevision);
   const {
     isMobile: isMobileScreen,
     activeView,
@@ -72,6 +76,19 @@ function App() {
   const copyToWechat = useEditorStore((state) => state.copyToWechat);
   const copyAsHtml = useEditorStore((state) => state.copyAsHtml);
   const [showThemePanel, setShowThemePanel] = useState(false);
+
+  // 自定义主题真源在工作区文件夹，副作用单点启用
+  useEffect(() => {
+    const backend = createWorkspaceThemeBackend({
+      storageType,
+      storageReady: ready,
+      adapter,
+      workspacePath,
+    });
+    const themeStore = useThemeStore.getState();
+    themeStore.setWorkspaceThemeBackend(backend);
+    if (backend) void themeStore.loadWorkspaceThemes();
+  }, [adapter, ready, storageType, workspacePath, workspaceRevision]);
 
   // 全局保存快捷键（统一监听器）
   useEffect(() => {
@@ -237,6 +254,8 @@ function App() {
           />
         </Suspense>
       )}
+      <WorkspaceThemeMergePrompt />
+
       {/* 只在存储上下文完全就绪且确认为 IndexedDB 模式时才渲染 HistoryManager */}
       {!isElectron && ready && storageType === "indexeddb" && (
         <Suspense fallback={null}>

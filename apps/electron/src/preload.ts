@@ -49,6 +49,10 @@ contextBridge.exposeInMainWorld('electron', {
             return handler;
         },
 
+        // 工作区自定义主题（路径由主进程按工作区推导，渲染进程不传路径）
+        readThemes: () => ipcRenderer.invoke('theme:read'),
+        writeThemes: (content: string) => ipcRenderer.invoke('theme:write', content),
+
         removeAllListeners: () => {
             ipcRenderer.removeAllListeners('file:refresh');
             ipcRenderer.removeAllListeners('menu:new-file');

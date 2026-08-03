@@ -47,6 +47,16 @@ export function ThemePanel({ open, onClose }: ThemePanelProps) {
   const exportThemeCSS = useThemeStore((state) => state.exportThemeCSS);
   const importTheme = useThemeStore((state) => state.importTheme);
   const customThemesFromStore = useThemeStore((state) => state.customThemes);
+  const workspaceBackend = useThemeStore((state) => state.workspaceBackend);
+  const workspaceFileBroken = useThemeStore(
+    (state) => state.workspaceFileBroken,
+  );
+  const storageHint =
+    workspaceBackend && !workspaceFileBroken
+      ? "保存在当前本地文件夹，换浏览器或设备打开同一文件夹即可继续使用"
+      : workspaceFileBroken
+        ? "本地文件夹中的主题文件无法读取，本次保存仅留在本机"
+        : "保存在当前浏览器，启用本地文件夹后会随文件夹一起保存";
   const persistActiveSnapshot = useHistoryStore(
     (state) => state.persistActiveSnapshot,
   );
@@ -392,6 +402,7 @@ export function ThemePanel({ open, onClose }: ThemePanelProps) {
       editorMode={editorMode}
       isVisualEditing={Boolean(isVisualEditing)}
       showDeleteConfirm={showDeleteConfirm}
+      storageHint={storageHint}
       useCurrentArticle={useCurrentArticle}
       previewCss={previewCss}
       designerVariables={designerVariables}

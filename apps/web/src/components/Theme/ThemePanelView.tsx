@@ -32,6 +32,8 @@ interface ThemePanelViewProps {
   editorMode: "visual" | "css";
   isVisualEditing: boolean;
   showDeleteConfirm: boolean;
+  /** 自定义主题当前存放位置说明 */
+  storageHint: string;
   useCurrentArticle: boolean;
   previewCss: string;
   designerVariables: DesignerVariables | undefined;
@@ -76,6 +78,7 @@ export function ThemePanelView({
   editorMode,
   isVisualEditing,
   showDeleteConfirm,
+  storageHint,
   useCurrentArticle,
   previewCss,
   designerVariables,
@@ -145,6 +148,7 @@ export function ThemePanelView({
             {customThemes.length > 0 && (
               <div className="theme-group">
                 <div className="theme-group-title">自定义主题</div>
+                <p className="theme-storage-hint">{storageHint}</p>
                 {customThemes.map((item) => (
                   <button
                     key={item.id}
