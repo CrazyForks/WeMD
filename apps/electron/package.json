@@ -7,7 +7,9 @@
   "author": "WeMD Team",
   "scripts": {
     "build": "rimraf dist && tsc",
+    "lint": "tsc --noEmit",
     "test": "rimraf dist && tsc && node --test dist/**/*.test.js",
+    "test:ci": "pnpm run test",
     "dev": "rimraf dist && tsc && electron .",
     "start": "electron .",
     "build:mac": "npm run build && electron-builder --mac --arm64 -c electron-builder.json",

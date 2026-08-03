@@ -5,8 +5,10 @@
   "types": "./dist/index.d.ts",
   "scripts": {
     "build": "tsc",
+    "lint": "tsc --noEmit",
     "dev": "tsc -w",
-    "test": "vitest"
+    "test": "vitest",
+    "test:ci": "pnpm run test --run"
   },
   "dependencies": {
     "highlight.js": "^11.11.1",
