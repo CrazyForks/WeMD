@@ -53,12 +53,34 @@ jobs:
           name: wemd-macos
           path: apps/electron/release/WeMD-*-arm64-mac.zip
 
+      - name: Fetch changelog for release notes
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/tenngoxars/WeMD-homepage/main/vp-docs/about/changelog.md -o /tmp/wemd-changelog.md
+
+      - name: Extract release notes
+        run: |
+          python3 - "${{ github.ref_name }}" /tmp/wemd-changelog.md /tmp/wemd-release-notes.md <<'PY'
+          import re, sys
+          tag, src, dst = sys.argv[1], sys.argv[2], sys.argv[3]
+          text = open(src, encoding="utf-8").read()
+          # 匹配 "## vX.Y.Z ..." 整行标题，避免前缀误匹配（如 v1.4.3 不会命中 v1.4.30）
+          m = re.search(rf"^## {re.escape(tag)}(?: |$)[^\n]*\n", text, re.M)
+          if not m:
+              sys.exit(f"changelog 中未找到 {tag} 条目，请先在官网仓库更新 changelog 再重跑")
+          start = m.end()
+          nxt = re.search(r"^## v\d", text[start:], re.M)
+          end = start + nxt.start() if nxt else len(text)
+          open(dst, "w", encoding="utf-8").write(text[start:end].strip() + "\n")
+          PY
+
       - name: Publish GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v3
         with:
           name: WeMD ${{ github.ref_name }}
-          generate_release_notes: true
+          # Release 简介与官网更新日志保持同步，由 changelog 提取生成
+          body_path: /tmp/wemd-release-notes.md
+          update_release_body: true
           files: apps/electron/release/WeMD-*-arm64-mac.zip
 
   build-windows:
