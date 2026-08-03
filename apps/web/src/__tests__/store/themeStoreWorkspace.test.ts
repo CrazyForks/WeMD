@@ -285,7 +285,7 @@ describe("themeStore 工作区接入", () => {
     useThemeStore.setState({ workspaceFileBroken: false });
     useThemeStore.getState().createTheme("恢复后新建", "css", "#wemd {}");
     await vi.waitFor(() => expect(backend.write).toHaveBeenCalled());
-    const written = backend.write.mock.calls.at(-1)?.[0];
+    const written = vi.mocked(backend.write).mock.calls.at(-1)?.[0];
     expect(written?.workspaceId).toBeTruthy();
   });
 

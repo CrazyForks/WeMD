@@ -92,7 +92,7 @@ const initialSelectedTheme = (() => {
 /**
  * 主题 Store 接口
  */
-interface ThemeStore extends WorkspaceThemeSlice {
+export interface ThemeStore extends WorkspaceThemeSlice {
   // 当前主题
   themeId: string;
   themeName: string;
