@@ -112,15 +112,19 @@ const getRenderedPlainText = (container: HTMLElement): string => {
   return container.textContent || "";
 };
 
-const copyViaNativeExecCommand = (container: HTMLElement): boolean => {
-  const html = container.innerHTML;
-  const text = getRenderedPlainText(container);
+const copyViaNativeExecCommand = (
+  container: HTMLElement,
+  exactHtmlTransport: boolean,
+): boolean => {
+  const html = exactHtmlTransport ? container.innerHTML : "";
+  const text = exactHtmlTransport ? getRenderedPlainText(container) : "";
   const selection = window.getSelection();
-  const previousRanges = selection
-    ? Array.from({ length: selection.rangeCount }, (_, index) =>
-        selection.getRangeAt(index).cloneRange(),
-      )
-    : [];
+  if (!selection) return false;
+
+  const previousRanges = Array.from(
+    { length: selection.rangeCount },
+    (_, index) => selection.getRangeAt(index).cloneRange(),
+  );
   const previousActiveElement =
     document.activeElement instanceof HTMLElement
       ? document.activeElement
@@ -135,7 +139,11 @@ const copyViaNativeExecCommand = (container: HTMLElement): boolean => {
         }
       : null;
   let payloadWritten = false;
+  let copyEventObserved = false;
   const handleCopy = (event: Event) => {
+    copyEventObserved = true;
+    if (!exactHtmlTransport) return;
+
     const clipboardEvent = event as ClipboardEvent;
     if (!clipboardEvent.clipboardData) return;
 
@@ -153,12 +161,14 @@ const copyViaNativeExecCommand = (container: HTMLElement): boolean => {
   try {
     const range = document.createRange();
     range.selectNodeContents(container);
-    selection?.removeAllRanges();
-    selection?.addRange(range);
+    selection.removeAllRanges();
+    selection.addRange(range);
 
-    // 返回值只表示命令是否执行，不代表 copy handler 已写入目标载荷。
-    document.execCommand("copy");
-    return payloadWritten;
+    // 普通主题沿用浏览器选区序列化；连续背景则只认 copy handler 的精确写入结果。
+    const commandSucceeded = document.execCommand("copy");
+    return exactHtmlTransport
+      ? payloadWritten
+      : commandSucceeded && copyEventObserved;
   } catch {
     return false;
   } finally {
@@ -187,10 +197,10 @@ const copyViaNativeExecCommand = (container: HTMLElement): boolean => {
       }
     }
 
-    selection?.removeAllRanges();
+    selection.removeAllRanges();
     previousRanges.forEach((previousRange) => {
       try {
-        selection?.addRange(previousRange);
+        selection.addRange(previousRange);
       } catch {
         // 原选区节点已移除时保持空选区，避免复制流程继续失败。
       }
@@ -268,14 +278,14 @@ export async function copyToWechat(
     await renderMermaidBlocks(container);
     await renderTableBlocks(container, getPublishingPreference("tableWrap"));
     renderMacSignDotsToImages(container);
-    normalizeCopyContainer(container);
+    const { requiresExactHtmlTransport } = normalizeCopyContainer(container);
 
     let copied = false;
 
     const preferElectronClipboard = shouldPreferElectronClipboard();
 
     if (!preferElectronClipboard) {
-      copied = copyViaNativeExecCommand(container);
+      copied = copyViaNativeExecCommand(container, requiresExactHtmlTransport);
     }
 
     if (!copied && window.electron?.isElectron) {
@@ -296,7 +306,7 @@ export async function copyToWechat(
     }
 
     if (!copied && preferElectronClipboard) {
-      copied = copyViaNativeExecCommand(container);
+      copied = copyViaNativeExecCommand(container, requiresExactHtmlTransport);
     }
 
     if (!copied && navigator.clipboard && window.ClipboardItem) {

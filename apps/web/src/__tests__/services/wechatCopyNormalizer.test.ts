@@ -25,7 +25,9 @@ describe("wechatCopyNormalizer", () => {
     container.innerHTML =
       '<section id="wemd" style="background: transparent; background-color: transparent; color: rgb(9, 9, 9);"><p style="margin-top:18px; background-color: transparent;">A</p><p style="background: rgb(1, 2, 3);">B</p></section>';
 
-    normalizeCopyContainer(container);
+    const result = normalizeCopyContainer(container);
+
+    expect(result.requiresExactHtmlTransport).toBe(false);
 
     const section = container.querySelector("section");
     expect(section).toBeNull();
@@ -68,7 +70,9 @@ describe("wechatCopyNormalizer", () => {
     const originalRoot = container.firstElementChild as HTMLElement;
     const originalChildren = Array.from(originalRoot.children);
 
-    normalizeCopyContainer(container);
+    const result = normalizeCopyContainer(container);
+
+    expect(result.requiresExactHtmlTransport).toBe(true);
 
     const root = container.firstElementChild as HTMLElement;
     expect(container.childElementCount).toBe(1);

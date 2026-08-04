@@ -69,6 +69,12 @@ const BACKGROUND_HTML = `
   </section>
 `;
 
+const PLAIN_IMAGE_HTML = `
+  <section id="wemd" style="color: rgb(34, 34, 34);">
+    <figure style="display: flex; margin: 0;"><img src="https://example.com/image.png" alt="示例图" style="display: block; margin: 0 0 24px;" /></figure><p style="margin: 16px 0 0;">图片下方正文</p>
+  </section>
+`;
+
 const MAC_BAR_BACKGROUND_HTML = `
   <section id="wemd" style="background-image: repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.08) 0 1px, transparent 1px 12px); background-size: 12px 12px;">
     <pre class="custom" style="padding: 0; background: rgb(31, 41, 55); overflow: hidden;"><span class="mac-sign" aria-hidden="true" style="display: block; height: 13px; padding: 10px 14px 0; line-height: 0;"><span class="mac-dot" style="display: inline-block; width: 10px; height: 10px; margin-top: 1.5px; margin-right: 7.5px; border-radius: 50%; background: rgb(237, 108, 96);"></span><span class="mac-dot" style="display: inline-block; width: 10px; height: 10px; margin-top: 1.5px; margin-right: 7.5px; border-radius: 50%; background: rgb(247, 193, 81);"></span><span class="mac-dot" style="display: inline-block; width: 10px; height: 10px; margin-top: 1.5px; border-radius: 50%; background: rgb(100, 200, 86);"></span></span><code class="hljs" style="display: block; margin: 0; padding: 16px;">const background = 'section';</code></pre>
@@ -137,6 +143,49 @@ describe("wechatCopyService 原生剪贴板传输", () => {
     document.body.replaceChildren();
     window.getSelection()?.removeAllRanges();
     vi.restoreAllMocks();
+  });
+
+  it("普通主题使用浏览器原生选区序列化，避免 strict 根容器触发公众号图片空行", async () => {
+    mocked.processHtml.mockReturnValue(PLAIN_IMAGE_HTML);
+    const setData = vi.fn();
+    let copyEvent: Event | undefined;
+    let selectedText = "";
+    const selectedFragments: DocumentFragment[] = [];
+    vi.spyOn(document, "execCommand").mockImplementation(() => {
+      const selection = window.getSelection();
+      selectedText = selection?.toString() ?? "";
+      if (selection && selection.rangeCount > 0) {
+        selectedFragments.push(selection.getRangeAt(0).cloneContents());
+      }
+      copyEvent = dispatchCopyEvent({ setData } as ClipboardDataStub);
+      return true;
+    });
+
+    await copyToWechat("test", "#wemd { color: #222; }");
+
+    expect(setData).not.toHaveBeenCalled();
+    expect(copyEvent?.defaultPrevented).toBe(false);
+    expect(selectedText).toContain("图片下方正文");
+    expect(selectedFragments).toHaveLength(1);
+    const selectedFigure = selectedFragments[0].querySelector("figure");
+    expect(selectedFigure?.firstElementChild?.tagName).toBe("IMG");
+    expect(selectedFigure?.nextElementSibling?.tagName).toBe("P");
+    expect(mocked.clipboardWrite).not.toHaveBeenCalled();
+    expect(mocked.toastSuccess).toHaveBeenCalledTimes(1);
+  });
+
+  it("普通主题未触发原生 copy 事件时进入 Clipboard API 回退", async () => {
+    mocked.processHtml.mockReturnValue(PLAIN_IMAGE_HTML);
+    vi.spyOn(document, "execCommand").mockReturnValue(true);
+
+    await copyToWechat("test", "#wemd { color: #222; }");
+
+    expect(mocked.clipboardWrite).toHaveBeenCalledTimes(1);
+    const [[items]] = mocked.clipboardWrite.mock.calls;
+    const clipboardItem = items[0] as { data: Record<string, Blob> };
+    expect(await readBlobText(clipboardItem.data["text/html"])).toContain(
+      "图片下方正文",
+    );
   });
 
   it("execCommand 返回 true 但 copy 事件未写入时继续 fallback", async () => {

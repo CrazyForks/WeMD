@@ -457,7 +457,14 @@ const normalizeBlockBackgroundForWechat = (
 
 // ── 对外入口 ────────────────────────────────────────
 
-export const normalizeCopyContainer = (container: HTMLElement): void => {
+export interface WechatCopyNormalizationResult {
+  /** 连续背景依赖完整根 section，剪贴板传输不能交给浏览器剥离根容器。 */
+  requiresExactHtmlTransport: boolean;
+}
+
+export const normalizeCopyContainer = (
+  container: HTMLElement,
+): WechatCopyNormalizationResult => {
   materializeCodeLineBreaksForWechat(container);
   const preserveRootBackgroundCanvas =
     prepareRootBackgroundCanvasForWechat(container);
@@ -473,4 +480,8 @@ export const normalizeCopyContainer = (container: HTMLElement): void => {
   }
   normalizeBlockBackgroundForWechat(container, rootBgColor);
   materializeTextColorForWechat(container);
+
+  return {
+    requiresExactHtmlTransport: preserveRootBackgroundCanvas,
+  };
 };
