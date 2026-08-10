@@ -29,55 +29,7 @@ import {
 import { useUITheme } from "../../hooks/useUITheme";
 import { useWindowControls } from "../../hooks/useWindowControls";
 import { resolveAppAssetPath } from "../../utils/assetPath";
-import { Modal, FloatingToolbarButton } from "../common";
-
-const WindowControls = ({ hidden = false }: { hidden?: boolean }) => {
-  const { minimize, maximize, close } = useWindowControls();
-
-  return (
-    <div className={hidden ? "window-controls-hidden" : "window-controls"}>
-      <button
-        className="win-btn win-minimize"
-        onClick={() => minimize?.()}
-        aria-label="最小化"
-      >
-        <svg width="10" height="1" viewBox="0 0 10 1">
-          <rect width="10" height="1" fill="currentColor" />
-        </svg>
-      </button>
-      <button
-        className="win-btn win-maximize"
-        onClick={() => maximize?.()}
-        aria-label="最大化"
-      >
-        <svg width="10" height="10" viewBox="0 0 10 10">
-          <rect
-            width="9"
-            height="9"
-            x="0.5"
-            y="0.5"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1"
-          />
-        </svg>
-      </button>
-      <button
-        className="win-btn win-close"
-        onClick={() => close?.()}
-        aria-label="关闭"
-      >
-        <svg width="10" height="10" viewBox="0 0 10 10">
-          <path
-            d="M0,0 L10,10 M10,0 L0,10"
-            stroke="currentColor"
-            strokeWidth="1.2"
-          />
-        </svg>
-      </button>
-    </div>
-  );
-};
+import { Modal, FloatingToolbarButton, WindowControls } from "../common";
 
 export function Header() {
   const { copyToWechat, copyAsHtml } = useEditorStore();
@@ -179,7 +131,7 @@ export function Header() {
       {isElectron && (
         <div className={`hidden-titlebar ${autoHide ? "is-active" : ""}`}>
           <div className="hidden-titlebar-drag-region" aria-hidden="true" />
-          {autoHide && isWindows && <WindowControls hidden />}
+          {autoHide && isWindows && <WindowControls variant="compact" />}
         </div>
       )}
 

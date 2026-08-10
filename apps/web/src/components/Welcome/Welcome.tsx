@@ -1,11 +1,14 @@
 import { FolderOpen } from "lucide-react";
 import { useFileSystem } from "../../hooks/useFileSystem";
 import { useUITheme } from "../../hooks/useUITheme";
+import { useWindowControls } from "../../hooks/useWindowControls";
 import { resolveAppAssetPath } from "../../utils/assetPath";
+import { WindowControls } from "../common";
 import "./Welcome.css";
 
 export function Welcome() {
   const { selectWorkspace } = useFileSystem();
+  const { isWindows } = useWindowControls();
   const theme = useUITheme((state) => state.theme);
   const logoSrc = resolveAppAssetPath(
     theme === "dark" ? "favicon-light.svg" : "favicon-dark.svg",
@@ -13,6 +16,12 @@ export function Welcome() {
 
   return (
     <div className="welcome-container">
+      {isWindows && (
+        <div className="welcome-titlebar">
+          <div className="welcome-titlebar-drag-region" aria-hidden="true" />
+          <WindowControls variant="compact" />
+        </div>
+      )}
       <div className="welcome-content">
         <img src={logoSrc} alt="WeMD Logo" className="welcome-logo" />
         <h1>欢迎使用 WeMD</h1>

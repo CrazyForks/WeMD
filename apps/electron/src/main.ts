@@ -4,6 +4,7 @@ import { registerIpcHandlers } from "./ipc";
 import { checkForUpdates } from "./updater";
 import { configureAppIdentity, createWindow } from "./window";
 import { stopWatching } from "./watch/workspaceWatcher";
+import { configureSingleInstance } from "./singleInstance";
 
 const isDev =
   !app.isPackaged ||
@@ -16,9 +17,7 @@ let mainWindow: BrowserWindow | null = null;
 
 const getMainWindow = () => mainWindow;
 
-registerIpcHandlers(getMainWindow);
-
-function openMainWindow(): void {
+function openMainWindow(): BrowserWindow {
   mainWindow = createWindow({
     isDev,
     onClosed: () => {
@@ -26,25 +25,45 @@ function openMainWindow(): void {
       stopWatching();
     },
   });
+  return mainWindow;
 }
 
-app.whenReady().then(() => {
-  openMainWindow();
-  createMenu(getMainWindow);
+const isPrimaryInstance = configureSingleInstance(
+  {
+    requestSingleInstanceLock: () => app.requestSingleInstanceLock(),
+    quit: () => app.quit(),
+    onSecondInstance: (listener) => {
+      app.on("second-instance", () => {
+        // 第二实例可能早于 ready 事件抵达，统一排到窗口生命周期可用后处理。
+        void app.whenReady().then(listener);
+      });
+    },
+  },
+  getMainWindow,
+  openMainWindow,
+);
 
-  setTimeout(() => {
-    checkForUpdates(mainWindow);
-  }, 3000);
+if (isPrimaryInstance) {
+  registerIpcHandlers(getMainWindow);
 
-  app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      openMainWindow();
+  app.whenReady().then(() => {
+    openMainWindow();
+    createMenu(getMainWindow);
+
+    setTimeout(() => {
+      checkForUpdates(mainWindow);
+    }, 3000);
+
+    app.on("activate", () => {
+      if (BrowserWindow.getAllWindows().length === 0) {
+        openMainWindow();
+      }
+    });
+  });
+
+  app.on("window-all-closed", () => {
+    if (process.platform !== "darwin") {
+      app.quit();
     }
   });
-});
-
-app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
-    app.quit();
-  }
-});
+}

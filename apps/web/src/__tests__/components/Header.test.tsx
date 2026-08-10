@@ -258,7 +258,7 @@ describe("Header", () => {
     fireEvent.click(screen.getByLabelText("隐藏标题栏"));
 
     const hiddenTitlebar = document.querySelector(".hidden-titlebar");
-    const controls = hiddenTitlebar?.querySelector(".window-controls-hidden");
+    const controls = hiddenTitlebar?.querySelector(".window-controls-compact");
     expect(controls).not.toBeNull();
 
     fireEvent.click(within(controls as HTMLElement).getByLabelText("最小化"));
